@@ -1,0 +1,217 @@
+// Persistence layer with two interchangeable adapters, selected at startup:
+//  - MongoDB when MONGODB_URI is set (production / Vercel)
+//  - a JSON file otherwise (local development and tests)
+// Routes only use the async collection API below:
+//   byId(id) · findOne(query) · findMany(query, { newestFirst, limit }) · insert(doc) · update(id, patch) · remove(id)
+//   addToList(id, field, value) · removeFromList(id, field, value)   (atomic array edits)
+// `query` is a plain equality match, e.g. { shopId, status: 'placed' }.
+const fs = require('fs');
+const path = require('path');
+const crypto = require('crypto');
+
+const COLLECTIONS = ['users', 'shops', 'products', 'enquiries', 'activity', 'wishlists', 'reviews'];
+const newId = () => crypto.randomUUID();
+const now = () => new Date().toISOString();
+const matches = (row, query = {}) => Object.entries(query).every(([k, v]) => row[k] === v);
+
+// ---------- JSON file adapter (file = null keeps data in memory only) ----------
+function fileAdapter(file) {
+  let state = null;
+
+  function load() {
+    if (state) return state;
+    try {
+      state = file ? JSON.parse(fs.readFileSync(file, 'utf8')) : {};
+    } catch {
+      state = {};
+    }
+    for (const c of COLLECTIONS) state[c] ||= [];
+    return state;
+  }
+
+  function save() {
+    if (!file) return;
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    const tmp = `${file}.tmp`;
+    fs.writeFileSync(tmp, JSON.stringify(state, null, 2));
+    fs.renameSync(tmp, file);
+  }
+
+  const collection = (name) => {
+    const rows = () => load()[name];
+    return {
+      async byId(id) { return rows().find((r) => r.id === id) || null; },
+      async findOne(query) { return rows().find((r) => matches(r, query)) || null; },
+      async findMany(query, { newestFirst = false, limit } = {}) {
+        let list = rows().filter((r) => matches(r, query));
+        if (newestFirst) list = [...list].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+        return limit ? list.slice(0, limit) : list;
+      },
+      async insert(doc) {
+        const row = { id: newId(), createdAt: now(), updatedAt: now(), ...doc };
+        rows().push(row);
+        save();
+        return row;
+      },
+      async update(id, patch) {
+        const row = rows().find((r) => r.id === id);
+        if (!row) return null;
+        Object.assign(row, patch, { updatedAt: now() });
+        save();
+        return row;
+      },
+      async addToList(id, field, value) {
+        const row = rows().find((r) => r.id === id);
+        if (!row) return null;
+        const list = row[field] || [];
+        row[field] = list.includes(value) ? list : [...list, value];
+        row.updatedAt = now();
+        save();
+        return row;
+      },
+      async removeFromList(id, field, value) {
+        const row = rows().find((r) => r.id === id);
+        if (!row) return null;
+        row[field] = (row[field] || []).filter((v) => v !== value);
+        row.updatedAt = now();
+        save();
+        return row;
+      },
+      async remove(id) {
+        const list = rows();
+        const i = list.findIndex((r) => r.id === id);
+        if (i === -1) return false;
+        list.splice(i, 1);
+        save();
+        return true;
+      },
+    };
+  };
+
+  return {
+    kind: file ? 'file' : 'memory',
+    collection,
+    async reset() {
+      state = Object.fromEntries(COLLECTIONS.map((c) => [c, []]));
+      save();
+    },
+    async ping() {
+      load();
+    },
+    async close() {},
+  };
+}
+
+// ---------- MongoDB adapter ----------
+function mongoAdapter(uri) {
+  const { MongoClient } = require('mongodb');
+
+  // Connect lazily and reuse the client across serverless invocations. A failed connection
+  // (bad URI, Atlas network rules) is reported to that request and retried on the next one,
+  // instead of crashing the function at startup.
+  async function client() {
+    if (!globalThis.__roomfitMongo) {
+      const connecting = (async () => new MongoClient(uri, { serverSelectionTimeoutMS: 8000 }).connect())();
+      globalThis.__roomfitMongo = connecting;
+      connecting.catch(() => {
+        if (globalThis.__roomfitMongo === connecting) globalThis.__roomfitMongo = null;
+      });
+    }
+    try {
+      return await globalThis.__roomfitMongo;
+    } catch (err) {
+      throw Object.assign(new Error(`Cannot connect to MongoDB: ${err.message}`), { status: 503, expose: true });
+    }
+  }
+  const database = async () => (await client()).db(process.env.MONGODB_DB || 'roomfit');
+  const noMongoId = { projection: { _id: 0 } };
+
+  const collection = (name) => {
+    const col = async () => (await database()).collection(name);
+    return {
+      async byId(id) { return (await col()).findOne({ id }, noMongoId); },
+      async findOne(query = {}) { return (await col()).findOne(query, noMongoId); },
+      async findMany(query = {}, { newestFirst = false, limit } = {}) {
+        let cursor = (await col()).find(query, noMongoId);
+        if (newestFirst) cursor = cursor.sort({ createdAt: -1 });
+        if (limit) cursor = cursor.limit(limit);
+        return cursor.toArray();
+      },
+      async insert(doc) {
+        const row = { id: newId(), createdAt: now(), updatedAt: now(), ...doc };
+        await (await col()).insertOne({ ...row });
+        return row;
+      },
+      async update(id, patch) {
+        return (await col()).findOneAndUpdate(
+          { id },
+          { $set: { ...patch, updatedAt: now() } },
+          { returnDocument: 'after', ...noMongoId },
+        );
+      },
+      async addToList(id, field, value) {
+        return (await col()).findOneAndUpdate(
+          { id },
+          { $addToSet: { [field]: value }, $set: { updatedAt: now() } },
+          { returnDocument: 'after', ...noMongoId },
+        );
+      },
+      async removeFromList(id, field, value) {
+        return (await col()).findOneAndUpdate(
+          { id },
+          { $pull: { [field]: value }, $set: { updatedAt: now() } },
+          { returnDocument: 'after', ...noMongoId },
+        );
+      },
+      async remove(id) {
+        return (await (await col()).deleteOne({ id })).deletedCount === 1;
+      },
+    };
+  };
+
+  return {
+    kind: 'mongo',
+    collection,
+    async reset() {
+      const d = await database();
+      for (const c of COLLECTIONS) await d.collection(c).deleteMany({});
+      await d.collection('users').createIndex({ email: 1 }, { unique: true });
+      for (const c of COLLECTIONS) await d.collection(c).createIndex({ id: 1 }, { unique: true });
+    },
+    async ping() {
+      await (await database()).command({ ping: 1 });
+    },
+    async close() {
+      const pending = globalThis.__roomfitMongo;
+      globalThis.__roomfitMongo = null;
+      if (pending) await (await pending.catch(() => null))?.close();
+    },
+  };
+}
+
+// The connection string normally comes from MONGODB_URI. Vercel's MongoDB Atlas integration can
+// add a custom prefix (e.g. STORAGE_MONGODB_URI), so any *MONGODB_URI / *MONGODB_URL variable
+// holding a mongodb:// or mongodb+srv:// string is accepted too.
+const mongoEnvNames = Object.keys(process.env).filter((k) => /MONGO/i.test(k)).sort();
+const mongoUriVar = ['MONGODB_URI', ...mongoEnvNames.filter((k) => /MONGO(DB)?_(URI|URL)$/i.test(k))]
+  .find((k) => /^mongodb(\+srv)?:\/\//.test(process.env[k] || ''));
+const mongoUri = mongoUriVar ? process.env[mongoUriVar] : null;
+
+// On Vercel without a MongoDB URI the filesystem is read-only, so run in demo mode:
+// data lives in memory (seeded automatically) and resets whenever the function restarts.
+const adapter = mongoUri
+  ? mongoAdapter(mongoUri)
+  : process.env.VERCEL
+    ? fileAdapter(null)
+    : fileAdapter(process.env.DATA_FILE || path.join(__dirname, '..', 'data', 'db.json'));
+
+module.exports = {
+  kind: adapter.kind,
+  // For /api/health: variable names only, never their values.
+  mongoUriVar: mongoUriVar || null,
+  mongoEnvNames,
+  reset: adapter.reset,
+  ping: adapter.ping,
+  close: adapter.close,
+  ...Object.fromEntries(COLLECTIONS.map((c) => [c, adapter.collection(c)])),
+};
