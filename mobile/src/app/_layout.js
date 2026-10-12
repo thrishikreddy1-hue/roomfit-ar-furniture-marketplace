@@ -25,17 +25,13 @@ function RootStack() {
       {/* Shoppers (and guests) get the storefront; sellers get their dashboard; the admin gets the AR studio. */}
       <Stack.Protected guard={!isSeller && !isAdmin}>
         <Stack.Screen name="(shop)" options={{ headerShown: false }} />
-        <Stack.Screen name="wishlist" options={{ title: 'Saved pieces' }} />
-        <Stack.Screen name="product/[id]" options={{ title: '' }} />
-        <Stack.Screen name="shop/[id]" options={{ title: '' }} />
-        {/* Guests can enquire too; no account needed. */}
-        <Stack.Screen name="enquire/[id]" options={{ title: 'Enquire', presentation: 'modal' }} />
       </Stack.Protected>
 
       <Stack.Protected guard={isSeller}>
         <Stack.Screen name="(seller)" options={{ headerShown: false }} />
         <Stack.Screen name="seller/product-form" options={{ title: 'Product' }} />
         <Stack.Screen name="seller/shop-form" options={{ title: 'Shop profile' }} />
+        <Stack.Screen name="seller/catalogue" options={{ title: 'All products' }} />
       </Stack.Protected>
 
       <Stack.Protected guard={isAdmin}>
@@ -45,6 +41,15 @@ function RootStack() {
         <Stack.Screen name="admin/user/[id]" options={{ title: 'Account' }} />
         <Stack.Screen name="admin/activity" options={{ title: 'Activity log' }} />
         <Stack.Screen name="admin/app-settings" options={{ title: 'App settings' }} />
+        <Stack.Screen name="admin/my-shopping-enquiries" options={{ title: 'My shopping messages' }} />
+      </Stack.Protected>
+
+      {/* Declare the role's home navigator first, so login never anchors on a dynamic product URL. */}
+      <Stack.Screen name="product/[id]" options={{ title: '' }} />
+      <Stack.Screen name="shop/[id]" options={{ title: '' }} />
+      <Stack.Protected guard={!isSeller}>
+        <Stack.Screen name="wishlist" options={{ title: 'Saved pieces' }} />
+        <Stack.Screen name="enquire/[id]" options={{ title: 'Enquire', presentation: 'modal' }} />
       </Stack.Protected>
 
       <Stack.Protected guard={!!user}>

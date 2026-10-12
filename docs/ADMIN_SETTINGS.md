@@ -6,7 +6,7 @@ Sign in with an admin account, open **Overview → App settings**, and use the
 - On (the default): buyers and guests can open the Private viewing tab.
 - Off: the tab and its direct page are unavailable. An open Private viewing
   page redirects to Home when the app receives the new setting.
-- Discover, saved pieces, and individual product AR previews are unchanged.
+- Shop (the full catalogue), saved pieces, and individual product AR previews are unchanged.
 - Turning it off deletes no products or other records. Turn it on to restore it.
 
 Settings are stored in the database's `settings` collection. Only authenticated,
@@ -26,6 +26,17 @@ shown. No redeployment is needed when an admin changes the switch.
 2. Save On. Verify that the tab returns and opens normally.
 3. Reload the browsers and confirm the saved choice remains.
 4. Confirm a buyer/seller cannot open App settings or save settings via the API.
+
+Admins also have a **Shop** tab for the same public catalogue buyers see. They can
+open product/shop pages, save products, send enquiries about real listings, and
+review shops after an enquiry. Their personal messages live under **Account → My
+shopping messages**; marketplace-wide moderation remains under **Enquiries**.
+Suspended shops stay out of the shopping catalogue. Sample previews are still
+not for sale, and admin previews are excluded from shopper-interest counters.
+
+Both admins and sellers have a **Home** tab with the public storefront, all
+products, categories and shops. Their existing operations tabs remain available.
+Seller catalogue browsing does not grant buyer-only wishlist/enquiry permissions.
 
 The API regression test runs against both JSON-file and MongoDB adapters and
 covers defaults, role restrictions, validation, persistence, public updates,

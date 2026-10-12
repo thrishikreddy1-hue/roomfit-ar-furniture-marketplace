@@ -56,11 +56,20 @@ function parseProduct(body, { partial = false } = {}) {
 
   if (has('dimensions') || !partial) {
     // Real-world size in centimetres — used for "will it fit" checks and true-scale AR.
-    const d = body.dimensions || {};
-    const dims = { width: Number(d.width), depth: Number(d.depth), height: Number(d.height) };
-    if (Object.values(dims).some((v) => !Number.isFinite(v) || v <= 0)) {
-      errors.push('dimensions.width, depth and height (cm) are required');
-    } else out.dimensions = dims;
+    const d = body.dimensions ?? {};
+    if (typeof d !== 'object' || Array.isArray(d)) {
+      errors.push('dimensions must be an object with optional width, depth and height');
+    } else {
+      const dims = {};
+      for (const key of ['width', 'depth', 'height']) {
+        const value = d[key];
+        if (value === undefined || value === null || (typeof value === 'string' && !value.trim())) dims[key] = null;
+        else if (!['number', 'string'].includes(typeof value) || !Number.isFinite(Number(value)) || Number(value) <= 0) {
+          errors.push(`dimensions.${key} must be a positive number, or left empty`);
+        } else dims[key] = Number(value);
+      }
+      out.dimensions = dims;
+    }
   }
 
   for (const k of ['description', 'material', 'color']) {
@@ -93,9 +102,9 @@ router.get('/', async (req, res) => {
     if (term && !`${p.name} ${p.description} ${p.material} ${p.color}`.toLowerCase().includes(term)) return false;
     if (arOnly === 'true' && !p.modelUrl) return false;
     // "Fits my space" filter
-    if (maxWidth && p.dimensions.width > Number(maxWidth)) return false;
-    if (maxDepth && p.dimensions.depth > Number(maxDepth)) return false;
-    if (maxHeight && p.dimensions.height > Number(maxHeight)) return false;
+    for (const [key, limit] of [['width', maxWidth], ['depth', maxDepth], ['height', maxHeight]]) {
+      if (limit && (!(p.dimensions?.[key] > 0) || p.dimensions[key] > Number(limit))) return false;
+    }
     return true;
   });
 
@@ -133,7 +142,7 @@ router.get('/:id', optionalAuth, async (req, res) => {
       return (b.createdAt || '').localeCompare(a.createdAt || '');
     })
     .slice(0, 6);
-  const saved = req.user?.role === 'buyer'
+  const saved = ['buyer', 'admin'].includes(req.user?.role)
     ? Boolean(await db.wishlists.findOne({ buyerId: req.user.id, productId: product.id }))
     : false;
   res.json({ product: await withShop(product), related: await withShops(related), saved });

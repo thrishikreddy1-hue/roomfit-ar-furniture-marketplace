@@ -16,7 +16,7 @@ router.get('/shop/:shopId', async (req, res) => {
   res.json({ reviews, average, count: all.length, page, hasMore: page * pageSize < all.length });
 });
 
-router.post('/shop/:shopId', requireRole('buyer'), async (req, res) => {
+router.post('/shop/:shopId', requireRole('buyer', 'admin'), async (req, res) => {
   const shop = await db.shops.byId(req.params.shopId);
   if (!shop || shop.suspended) return res.status(404).json({ error: 'Shop not found' });
   const rating = Number(req.body?.rating);

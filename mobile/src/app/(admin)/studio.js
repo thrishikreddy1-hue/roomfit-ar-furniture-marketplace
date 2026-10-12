@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../../lib/api';
 import { assetUrl } from '../../lib/config';
+import { dims } from '../../lib/format';
 import { useAsync } from '../../lib/useAsync';
 import { useLiveRefresh } from '../../lib/live';
 import DemoModeNotice from '../../components/DemoModeNotice';
@@ -76,7 +77,7 @@ export default function ArStudio() {
           <View style={{ flex: 1 }}>
             <Text style={styles.name} numberOfLines={1}>{p.name}</Text>
             <Muted style={{ fontSize: 12 }} numberOfLines={1}>{p.shop?.name} · {p.category}</Muted>
-            <Muted style={{ fontSize: 12 }}>{p.dimensions.width}×{p.dimensions.depth}×{p.dimensions.height} cm · {p.images?.length || 0} photos</Muted>
+            <Muted style={{ fontSize: 12 }}>{dims(p.dimensions)} · {p.images?.length || 0} photos</Muted>
             <View style={{ marginTop: 6 }}>
               {p.modelUrl
                 ? <Badge label={`AR live · ${p.placement === 'wall' ? 'wall' : 'floor'}`} icon="cube-outline" tone="success" />

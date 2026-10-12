@@ -1,5 +1,5 @@
-import Browse from './browse';
+import CatalogueScreen from '../../components/CatalogueScreen';
 
 export default function PrivateViewing() {
-  return <Browse privateViewing />;
+  return <CatalogueScreen privateViewing />;
 }

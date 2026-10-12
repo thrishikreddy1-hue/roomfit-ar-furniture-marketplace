@@ -28,9 +28,9 @@ const toForm = (p) => ({
   ...EMPTY,
   ...p,
   stock: String(p.stock),
-  width: String(p.dimensions.width),
-  depth: String(p.dimensions.depth),
-  height: String(p.dimensions.height),
+  width: String(p.dimensions?.width ?? ''),
+  depth: String(p.dimensions?.depth ?? ''),
+  height: String(p.dimensions?.height ?? ''),
   images: p.images || [],
 });
 
@@ -114,7 +114,7 @@ function ProductEditor({ id, product }) {
       material: form.material,
       color: form.color,
       description: form.description,
-      dimensions: { width: Number(form.width), depth: Number(form.depth), height: Number(form.height) },
+      dimensions: Object.fromEntries(['width', 'depth', 'height'].map((key) => [key, form[key].trim() ? Number(form[key]) : null])),
     };
     try {
       // Photos of a published product are already saved one by one.
@@ -176,8 +176,8 @@ function ProductEditor({ id, product }) {
         </View>
         <Field label="Description" value={form.description} onChangeText={set('description')} multiline />
 
-        <H2 style={styles.section}>Real-world size</H2>
-        <Muted style={{ marginBottom: 8 }}>Shoppers use these to check the fit, and they set the size of the piece in AR. Measure the widest points, in centimetres.</Muted>
+        <H2 style={styles.section}>Dimensions · optional</H2>
+        <Muted style={{ marginBottom: 8 }}>You can publish without measurements and add them later. If known, enter the widest points in centimetres. Complete measurements help shoppers check the fit; AR scale depends on the 3D model.</Muted>
         <View style={styles.pair}>
           <Field style={{ flex: 1 }} label="Width" value={form.width} onChangeText={num('width')} keyboardType="decimal-pad" />
           <Field style={{ flex: 1 }} label="Depth" value={form.depth} onChangeText={num('depth')} keyboardType="decimal-pad" />
@@ -190,7 +190,7 @@ function ProductEditor({ id, product }) {
             <Text style={styles.arTitle}>{arLive ? 'AR is live for this piece' : 'AR view: added by RoomFit'}</Text>
             <Muted style={{ fontSize: 13 }}>
               {arLive
-                ? 'Shoppers can place it in their room at its true size.'
+                ? 'Shoppers can preview the model in their room. Add measurements so they can verify the fit and scale.'
                 : 'Our team builds the 3D model from your photos and measurements. Clear photos from several angles help.'}
             </Muted>
           </View>

@@ -51,7 +51,7 @@ function SettingsForm({ initialSettings }) {
             trackColor={{ false: colors.border, true: colors.accent }}
             onValueChange={(next) => { setEnabled(next); setMessage(''); }} />
         </View>
-        <Muted style={{ marginTop: space(3) }}>Off hides the tab and its page for buyers and guests. Discover and product AR previews stay available. Nothing is deleted; you can turn it back on anytime.</Muted>
+        <Muted style={{ marginTop: space(3) }}>Off hides the tab and its page for buyers and guests. Shop and product AR previews stay available. Nothing is deleted; you can turn it back on anytime.</Muted>
         <ErrorBox error={saveError} />
         <Button title="Save changes" icon="checkmark-outline" loading={saving} disabled={enabled === savedValue}
           style={{ marginTop: space(4) }} onPress={save} />

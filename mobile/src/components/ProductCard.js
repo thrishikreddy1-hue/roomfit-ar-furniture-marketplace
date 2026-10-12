@@ -4,6 +4,7 @@ import { colors, shadow } from '../theme';
 import { assetUrl } from '../lib/config';
 import { hasAr } from '../lib/ar';
 import { availabilityLabel } from '../lib/availability.mjs';
+import { dims } from '../lib/format';
 import { Badge } from './ui';
 
 export default function ProductCard({ product, width, style }) {
@@ -34,7 +35,7 @@ export default function ProductCard({ product, width, style }) {
         <Text style={styles.shop} numberOfLines={1}>{product.shop?.name}</Text>
         <Text style={[styles.cta, availability === 'Sold' && { color: colors.muted }]}>{availability === 'Available' ? 'Enquire for price' : availability}</Text>
         <Text style={styles.dims} numberOfLines={1}>
-          {product.dimensions.width}×{product.dimensions.depth}×{product.dimensions.height} cm
+          {dims(product.dimensions)}
         </Text>
       </View>
     </Pressable>

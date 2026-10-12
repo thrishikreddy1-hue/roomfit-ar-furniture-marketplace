@@ -8,6 +8,7 @@ import { hasAr, openInRoom } from '../../lib/ar';
 import { callUrl, hasPhone, openLink, whatsappUrl } from '../../lib/contact';
 import { dims } from '../../lib/format';
 import { availabilityLabel } from '../../lib/availability.mjs';
+import { hasCompleteDimensions } from '../../lib/dimensions.mjs';
 import { useAsync } from '../../lib/useAsync';
 import { useLiveRefresh } from '../../lib/live';
 import { useAuth } from '../../context/AuthContext';
@@ -108,10 +109,10 @@ export default function ProductDetail() {
             <Text style={[styles.stock, { color: available ? colors.success : colors.warn }]}>
               · {availability}
             </Text>
-            <Pressable onPress={toggleSaved} disabled={saving} style={[styles.saveBtn, saving && { opacity: 0.5 }]}
+            {user?.role !== 'seller' && <Pressable onPress={toggleSaved} disabled={saving} style={[styles.saveBtn, saving && { opacity: 0.5 }]}
               accessibilityRole="button" accessibilityLabel={saved ? 'Remove saved product' : 'Save product'} accessibilityState={{ busy: saving, selected: saved }}>
               <Ionicons name={saved ? 'heart' : 'heart-outline'} size={19} color={colors.accentRose} />
-            </Pressable>
+            </Pressable>}
           </View>
         </View>
 
@@ -122,7 +123,9 @@ export default function ProductDetail() {
               <Text style={styles.arTitle}>Try it in your room</Text>
             </View>
             <Text style={styles.arBody}>
-              Place the {p.name.toLowerCase()} at its true size ({dims(p.dimensions)}), then walk around it to check the fit, colour and silhouette.
+              {hasCompleteDimensions(p.dimensions)
+                ? `Preview the ${p.name.toLowerCase()} in your room (${dims(p.dimensions)}). Compare the model with the listed measurements before checking the fit.`
+                : 'Preview the 3D model in your room. Product measurements are incomplete, so the model’s scale and real-world fit are not verified. Ask the shop for the size before deciding.'}
             </Text>
             <View style={styles.arSteps}>
               <Text style={styles.arStep}>1. Open AR</Text>
@@ -143,8 +146,8 @@ export default function ProductDetail() {
         </Card> : <Card style={{ marginTop: space(4) }}>
           <H2 style={{ fontSize: 16 }}>Interested in this piece?</H2>
           <Muted style={{ marginTop: 2 }}>Enquire and {p.shop?.name || 'the shop'} will share the price, availability and delivery details.</Muted>
-          <Button title="Enquire now" icon="chatbubble-ellipses-outline" style={{ marginTop: space(3) }}
-            onPress={() => router.push(`/enquire/${p.id}`)} />
+          {user?.role !== 'seller' && <Button title="Enquire now" icon="chatbubble-ellipses-outline" style={{ marginTop: space(3) }}
+            onPress={() => router.push(`/enquire/${p.id}`)} />}
           {hasPhone(shopPhone) && (
             <View style={styles.contactRow}>
               <Button small variant="outline" title="Call shop" icon="call-outline" style={{ flex: 1 }}
@@ -170,7 +173,7 @@ export default function ProductDetail() {
           <View style={styles.dimRow}>
             {['width', 'depth', 'height'].map((k) => (
               <View key={k} style={styles.dimBox}>
-                <Text style={styles.dimVal}>{p.dimensions[k]}</Text>
+                <Text style={styles.dimVal}>{p.dimensions?.[k] ?? '—'}</Text>
                 <Muted style={{ fontSize: 12 }}>{k} (cm)</Muted>
               </View>
             ))}

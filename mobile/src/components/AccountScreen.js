@@ -67,7 +67,14 @@ export default function AccountScreen() {
         </Card>
       )}
 
-      {user.role === 'buyer' && (
+      {user.role === 'admin' && (
+        <View style={{ gap: 10, marginTop: space(4) }}>
+          <Button title="Shop all products" icon="bag-handle-outline" onPress={() => router.push('/shop-catalogue')} />
+          <Button title="My shopping messages" icon="chatbubbles-outline" variant="outline" onPress={() => router.push('/admin/my-shopping-enquiries')} />
+        </View>
+      )}
+
+      {['buyer', 'admin'].includes(user.role) && (
         <Button title="Saved pieces" icon="heart-outline" variant="outline" style={{ marginTop: space(3) }} onPress={() => router.push('/wishlist')} />
       )}
 

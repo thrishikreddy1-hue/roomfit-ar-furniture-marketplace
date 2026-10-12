@@ -45,7 +45,7 @@ router.post('/', optionalAuth, async (req, res) => {
   if (preferredContact === 'email' && !contact.email) {
     return res.status(400).json({ error: 'Add your email to be contacted by email' });
   }
-  if (req.user && req.user.role !== 'buyer') return res.status(403).json({ error: 'Only shoppers can send enquiries' });
+  if (req.user && !['buyer', 'admin'].includes(req.user.role)) return res.status(403).json({ error: 'Only shoppers and admins can send enquiries' });
 
   const enquiry = await db.enquiries.insert({
     productId: product.id,

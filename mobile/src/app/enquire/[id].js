@@ -55,7 +55,7 @@ function EnquiryForm({ product }) {
                 <Button title="Message the shop on WhatsApp" icon="logo-whatsapp" variant="outline"
                   onPress={() => openLink(whatsappUrl(shopPhone, sent.message))} />
               )}
-              {user && <Button title="View my enquiries" onPress={() => router.replace('/enquiries')} />}
+              {user && <Button title="View my enquiries" onPress={() => router.replace(user.role === 'admin' ? '/admin/my-shopping-enquiries' : '/enquiries')} />}
               <Button title="Back to product" variant="outline" onPress={() => goBack(`/product/${product.id}`)} />
             </View>
           }

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { checkFit, parseSpace } from '../lib/fit';
+import { hasCompleteDimensions } from '../lib/dimensions.mjs';
 import { colors, radius, space as sp } from '../theme';
 import { Card, Chip, Field, H2, Muted } from './ui';
 
@@ -16,6 +17,10 @@ export default function FitChecker({ dimensions }) {
   const result = useMemo(() => (room ? checkFit(dimensions, room, clearance) : null), [room, clearance, dimensions]);
 
   const set = (k) => (v) => setInput((s) => ({ ...s, [k]: v.replace(/[^0-9.,]/g, '') }));
+
+  if (!hasCompleteDimensions(dimensions)) return (
+    <Card><H2>Will it fit?</H2><Muted style={{ marginTop: 8 }}>The seller hasn’t provided all measurements yet. Ask the shop for width, depth and height before checking the fit.</Muted></Card>
+  );
 
   return (
     <Card>

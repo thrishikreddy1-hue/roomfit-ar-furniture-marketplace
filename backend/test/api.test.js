@@ -384,7 +384,7 @@ test('enquiry flow: guest and shopper enquire, seller follows up', async () => {
   assert.equal(wantsEmailButNone.status, 400);
   assert.equal((await api('POST', '/api/enquiries', { token: seller, body: { productId: chair.id, name: 'S', phone: '9876543210' } })).status, 403);
   const admin = await login('admin@roomfit.test');
-  assert.equal((await api('POST', '/api/enquiries', { token: admin, body: { productId: chair.id, name: 'A', phone: '9876543210' } })).status, 403);
+  assert.equal((await api('POST', '/api/enquiries', { token: admin, body: { productId: chair.id, phone: '9876543210' } })).status, 400);
 
   // Guest enquiry gets a default message
   const guest = await api('POST', '/api/enquiries', { body: { productId: chair.id, name: 'Guest', phone: '+91 98765 43210' } });
@@ -720,7 +720,7 @@ test('storefront settings: admin-only, persistent, reversible Private viewing fl
   const path = '/api/admin/settings';
   const admin = await login('admin@roomfit.test');
   const buyer = await login('buyer@roomfit.test');
-  const seller = await login('seller@roomfit.test');
+  const seller = await login('seller@oakandloom.test');
   assert.deepEqual((await api('GET', '/api/settings')).body, { settings: { privateViewingEnabled: true } });
   assert.equal((await api('GET', path)).status, 401);
   for (const token of [undefined, buyer, seller]) {
@@ -747,4 +747,91 @@ test('storefront settings: admin-only, persistent, reversible Private viewing fl
   assert.equal((await db.settings.byId('storefront')).createdAt, row.createdAt);
   assert.deepEqual((await api('GET', '/api/settings')).body, { settings: { privateViewingEnabled: true } });
   assert.ok((await db.activity.findMany({ type: 'settings.updated' })).length >= 2);
+});
+
+test('admins can shop without losing admin access; personal shopping data stays scoped', async () => {
+  const { token: seller, product, shop } = await featureShop('admin-shopping');
+  const admin = await login('admin@roomfit.test');
+  const buyer = await login('buyer@roomfit.test');
+  const guestProducts = (await api('GET', '/api/products')).body.products;
+  for (const token of [admin, buyer]) {
+    const catalogue = await api('GET', '/api/products', { token });
+    assert.equal(catalogue.status, 200);
+    assert.deepEqual(catalogue.body.products.map((p) => p.id), guestProducts.map((p) => p.id));
+    assert.ok(catalogue.body.products.some((p) => p.id === product.id && !p.modelUrl));
+  }
+  assert.equal((await api('POST', `/api/wishlist/${product.id}`, { token: seller })).status, 403);
+  assert.equal((await api('POST', `/api/wishlist/${product.id}`, { token: admin })).status, 201);
+  assert.equal((await api('GET', `/api/products/${product.id}`, { token: admin })).body.saved, true);
+  assert.equal((await api('GET', `/api/products/${product.id}`, { token: buyer })).body.saved, false);
+  assert.ok((await api('GET', '/api/wishlist', { token: admin })).body.products.some((p) => p.id === product.id));
+  assert.equal((await api('POST', `/api/reviews/shop/${shop.id}`, { token: admin, body: { rating: 5 } })).status, 403);
+  const enquiry = await api('POST', '/api/enquiries', { token: admin, body: {
+    productId: product.id, name: 'Admin shopper', phone: '9876543210', message: 'Shopping enquiry test',
+  } });
+  assert.equal(enquiry.status, 201);
+  const me = (await api('GET', '/api/auth/me', { token: admin })).body.user;
+  assert.equal(me.role, 'admin');
+  assert.equal(enquiry.body.enquiry.buyerId, me.id);
+  const personal = (await api('GET', '/api/enquiries', { token: admin })).body.enquiries;
+  assert.ok(personal.some((e) => e.id === enquiry.body.enquiry.id));
+  assert.ok(personal.every((e) => e.buyerId === me.id));
+  assert.ok(!(await api('GET', '/api/enquiries', { token: buyer })).body.enquiries.some((e) => e.id === enquiry.body.enquiry.id));
+  assert.equal((await api('POST', `/api/reviews/shop/${shop.id}`, { token: admin, body: { rating: 5 } })).status, 201);
+  assert.equal((await api('GET', '/api/admin/overview', { token: admin })).status, 200);
+  assert.equal((await api('DELETE', `/api/wishlist/${product.id}`, { token: admin })).status, 204);
+  assert.equal((await api('GET', `/api/products/${product.id}`, { token: admin })).body.saved, false);
+});
+
+test('shop location: seller can save, update and clear safe Maps links; unrelated owners cannot', async () => {
+  const { token, shop } = await featureShop('location');
+  const other = await login('seller@oakandloom.test');
+  const url = 'https://www.google.com/maps/search/?api=1&query=shop';
+  const path = `/api/shops/${shop.id}`;
+  assert.equal((await api('PUT', path, { token, body: { googleMapsUrl: `  ${url}  `, deliveryLeadTime: 'Legacy value' } })).status, 200);
+  assert.equal((await api('GET', path)).body.shop.googleMapsUrl, url);
+  assert.equal((await api('PUT', path, { token: other, body: { googleMapsUrl: '' } })).status, 403);
+  for (const googleMapsUrl of ['javascript:alert(1)', 'https://example.com/maps/anything', 'https://google.com.evil.test/maps', 'https://user:password@www.google.com/maps/', 23]) {
+    assert.equal((await api('PUT', path, { token, body: { googleMapsUrl } })).status, 400);
+  }
+  assert.equal((await api('GET', path)).body.shop.googleMapsUrl, url);
+  const share = 'https://maps.app.goo.gl/testLocation';
+  assert.equal((await api('PUT', path, { token, body: { googleMapsUrl: share } })).body.shop.googleMapsUrl, share);
+  const cleared = await api('PUT', path, { token, body: { googleMapsUrl: '' } });
+  assert.equal(cleared.body.shop.googleMapsUrl, '');
+  assert.equal(cleared.body.shop.deliveryLeadTime, 'Legacy value');
+  const newSeller = (await api('POST', '/api/auth/register', { body: { name: 'Location seller', email: 'location-create@test.example', password: DEMO_PASSWORD, role: 'seller' } })).body.token;
+  assert.equal((await api('POST', '/api/shops', { token: newSeller, body: { name: 'Unsafe link', googleMapsUrl: 'https://example.com' } })).status, 400);
+  const created = await api('POST', '/api/shops', { token: newSeller, body: { name: 'Location shop', googleMapsUrl: share } });
+  assert.equal(created.status, 201);
+  assert.equal(created.body.shop.googleMapsUrl, share);
+});
+
+test('optional dimensions: publish without size, accept partial size, validate values and avoid false fit matches', async () => {
+  const { token } = await featureShop('optional-size');
+  const payload = { name: 'No measurements', category: 'Chairs' };
+  const empty = await api('POST', '/api/products', { token, body: payload });
+  assert.equal(empty.status, 201);
+  assert.deepEqual(empty.body.product.dimensions, { width: null, depth: null, height: null });
+  const partial = await api('POST', '/api/products', { token, body: { ...payload, name: 'Partial size', dimensions: { width: '120', depth: '', height: null } } });
+  assert.equal(partial.status, 201);
+  assert.deepEqual(partial.body.product.dimensions, { width: 120, depth: null, height: null });
+  for (const dimensions of [{ width: -1 }, { height: 0 }, { depth: 'abc' }, { width: true }, [], 'large']) {
+    assert.equal((await api('POST', '/api/products', { token, body: { ...payload, dimensions } })).status, 400);
+  }
+  assert.ok((await api('GET', '/api/products')).body.products.some((p) => p.id === empty.body.product.id));
+  const widthFiltered = (await api('GET', '/api/products?maxWidth=125')).body.products;
+  assert.ok(!widthFiltered.some((p) => p.id === empty.body.product.id));
+  assert.ok(widthFiltered.some((p) => p.id === partial.body.product.id));
+  assert.ok(!(await api('GET', '/api/products?maxDepth=125')).body.products.some((p) => p.id === partial.body.product.id));
+  const path = `/api/products/${partial.body.product.id}`;
+  const renamed = await api('PUT', path, { token, body: { name: 'Size retained' } });
+  assert.equal(renamed.body.product.dimensions.width, 120);
+  const cleared = await api('PUT', path, { token, body: { dimensions: {} } });
+  assert.deepEqual(cleared.body.product.dimensions, { width: null, depth: null, height: null });
+  const admin = await login('admin@roomfit.test');
+  await api('PUT', `/api/admin/products/${empty.body.product.id}/ar`, { token: admin, body: { modelUrl: 'https://example.com/chair.glb' } });
+  const ar = await fetch(`${base}/ar/${empty.body.product.id}`);
+  assert.equal(ar.status, 200);
+  assert.match(await ar.text(), /model scale and fit are not verified/);
 });

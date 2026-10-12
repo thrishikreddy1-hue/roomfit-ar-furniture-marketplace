@@ -4,12 +4,18 @@ const { optionalAuth, requireRole } = require('../middleware/auth');
 const { withShops } = require('./products');
 const { publish } = require('../events');
 const activity = require('../activity');
+const { normalizeGoogleMapsUrl } = require('../shopLocation');
 
 const router = express.Router();
 
-const SHOP_FIELDS = ['name', 'description', 'logo', 'coverImage', 'city', 'address', 'phone', 'whatsappNotifications', 'deliveryAreas', 'deliveryLeadTime', 'assemblyAvailable', 'pickupAvailable'];
+const SHOP_FIELDS = ['name', 'description', 'logo', 'coverImage', 'city', 'address', 'phone', 'googleMapsUrl', 'whatsappNotifications', 'deliveryAreas', 'deliveryLeadTime', 'assemblyAvailable', 'pickupAvailable'];
 const pick = (body) => Object.fromEntries(SHOP_FIELDS.filter((k) => body[k] !== undefined).map((k) => [k, body[k]]));
 function deliveryError(data) {
+  if (data.googleMapsUrl !== undefined) {
+    const normalized = normalizeGoogleMapsUrl(data.googleMapsUrl);
+    if (normalized === null) return 'Paste a valid HTTPS Google Maps location link, or leave it empty';
+    data.googleMapsUrl = normalized;
+  }
   for (const key of ['assemblyAvailable', 'pickupAvailable']) {
     if (data[key] !== undefined && typeof data[key] !== 'boolean') return `${key} must be true or false`;
   }

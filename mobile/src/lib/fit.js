@@ -13,6 +13,7 @@ function evaluate(w, d, h, space, clearance) {
 }
 
 export function checkFit(dimensions, space, clearance = 0) {
+  if (!['width', 'depth', 'height'].every((key) => Number.isFinite(dimensions?.[key]) && dimensions[key] > 0)) return null;
   const { width: w, depth: d, height: h } = dimensions;
   const straight = evaluate(w, d, h, space, clearance);
   if (straight.every((r) => r.ok)) return { fits: true, rotated: false, rows: straight };

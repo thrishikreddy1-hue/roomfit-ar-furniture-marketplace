@@ -5,7 +5,7 @@ const { withShops, hiddenShopIds } = require('./products');
 
 const router = express.Router();
 
-router.get('/', requireRole('buyer'), async (req, res) => {
+router.get('/', requireRole('buyer', 'admin'), async (req, res) => {
   const saved = await db.wishlists.findMany({ buyerId: req.user.id });
   const productIds = new Set(saved.map((item) => item.productId));
   const hidden = await hiddenShopIds();
@@ -13,7 +13,7 @@ router.get('/', requireRole('buyer'), async (req, res) => {
   res.json({ products });
 });
 
-router.post('/:productId', requireRole('buyer'), async (req, res) => {
+router.post('/:productId', requireRole('buyer', 'admin'), async (req, res) => {
   const product = await db.products.byId(req.params.productId);
   if (!product || (await hiddenShopIds()).has(product.shopId)) return res.status(404).json({ error: 'Product not found' });
   const existing = await db.wishlists.findOne({ buyerId: req.user.id, productId: product.id });
@@ -25,7 +25,7 @@ router.post('/:productId', requireRole('buyer'), async (req, res) => {
   res.status(201).json({ saved: true });
 });
 
-router.delete('/:productId', requireRole('buyer'), async (req, res) => {
+router.delete('/:productId', requireRole('buyer', 'admin'), async (req, res) => {
   // Removing a saved entry is also allowed when its product was deleted or hidden.
   const entries = await db.wishlists.findMany({ buyerId: req.user.id, productId: req.params.productId });
   await Promise.all(entries.map((entry) => db.wishlists.remove(entry.id)));

@@ -15,6 +15,7 @@ export default function SellerTabs() {
 
   return (
     <Tabs
+      initialRouteName="seller-home"
       screenOptions={{
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.muted,
@@ -25,6 +26,7 @@ export default function SellerTabs() {
         sceneStyle: { backgroundColor: colors.bg },
       }}
     >
+      <Tabs.Screen name="seller-home" options={{ title: 'Home', headerShown: false, tabBarIcon: (p) => <TabIcon name="home" {...p} /> }} />
       <Tabs.Screen name="dashboard" options={{ title: 'Dashboard', tabBarIcon: (p) => <TabIcon name="stats-chart" {...p} /> }} />
       <Tabs.Screen name="products" options={{ title: 'Products', tabBarIcon: (p) => <TabIcon name="cube" {...p} /> }} />
       <Tabs.Screen

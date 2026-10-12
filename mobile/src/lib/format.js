@@ -1,4 +1,4 @@
-export const dims = (d) => (d ? `${d.width} W × ${d.depth} D × ${d.height} H cm` : '—');
+export { dimensionsLabel as dims } from './dimensions.mjs';
 
 export const date = (iso) =>
   new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });

@@ -11,6 +11,8 @@ const absolute = (req, url) => (!url || /^https?:\/\//i.test(url) ? url : `${req
 function renderArPage(req, product) {
   const embed = req.query.embed === '1';
   const dims = product.dimensions || {};
+  const completeSize = ['width', 'depth', 'height'].every((key) => Number.isFinite(dims[key]) && dims[key] > 0);
+  const listedSize = completeSize ? `Listed size: ${dims.width} W × ${dims.depth} D × ${dims.height} H cm` : 'Product measurements are incomplete — model scale and fit are not verified';
   const src = absolute(req, product.modelUrl);
   const iosSrc = absolute(req, product.iosModelUrl);
   const poster = absolute(req, product.images?.[0]);
@@ -65,7 +67,7 @@ function renderArPage(req, product) {
 </style>
 </head>
 <body>
-${embed ? '' : `<header><h1>${esc(product.name)}</h1><p>Listed size: ${dims.width} W × ${dims.depth} D × ${dims.height} H cm</p></header>`}
+${embed ? '' : `<header><h1>${esc(product.name)}</h1><p>${esc(listedSize)}</p></header>`}
 <model-viewer id="mv"
   src="${esc(src)}" ${iosSrc ? `ios-src="${esc(iosSrc)}"` : ''} ${poster ? `poster="${esc(poster)}"` : ''}
   alt="3D model of ${esc(product.name)}"
@@ -73,7 +75,7 @@ ${embed ? '' : `<header><h1>${esc(product.name)}</h1><p>Listed size: ${dims.widt
   ${embed ? 'auto-rotate' : ''}
   ${embed ? '' : 'ar ar-modes="webxr scene-viewer quick-look" ar-scale="fixed"'} ar-placement="${placement}"
   style="position:relative">
-  ${embed ? '' : '<button slot="ar-button" class="ar-btn">📐 Place in my room (true size)</button>'}
+  ${embed ? '' : '<button slot="ar-button" class="ar-btn">📐 Preview in my room</button>'}
   <button slot="hotspot-w" class="dim" data-position="0 0 0" data-normal="0 1 0"></button>
   <button slot="hotspot-h" class="dim" data-position="0 0 0" data-normal="1 0 0"></button>
   <button slot="hotspot-d" class="dim" data-position="0 0 0" data-normal="1 0 0"></button>
@@ -85,7 +87,7 @@ ${embed ? '' : `<header><h1>${esc(product.name)}</h1><p>Listed size: ${dims.widt
 </model-viewer>
 ${embed ? '' : `<div class="note">
   <b>How it works:</b> tap the button, point your camera at the ${placement === 'wall' ? 'wall' : 'floor'}, and the ${esc(product.name)} appears at its
-  real size so you can check it fits and suits your room. Walk around it, and pinch to rotate.
+  model-authored size. ${completeSize ? 'Compare the model with the listed measurements before deciding whether it fits.' : 'The seller has not provided complete measurements. Ask the shop for the size; the model does not verify real-world fit.'} Walk around it, and pinch to rotate.
   <span id="no-ar"><br><br><b>AR is not available on this device.</b> Open this page on an ARCore-capable Android phone
   (Chrome) or an iPhone/iPad (Safari) to place it in your room. You can still rotate the 3D model here.</span>
 </div>`}

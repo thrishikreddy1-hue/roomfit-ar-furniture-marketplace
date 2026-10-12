@@ -6,10 +6,10 @@ import { api } from '../../lib/api';
 import { goBack } from '../../lib/nav';
 import { assetUrl } from '../../lib/config';
 import { useAuth } from '../../context/AuthContext';
-import { Button, ErrorBox, Field, H1, Muted, Screen } from '../../components/ui';
+import { Button, Card, ErrorBox, Field, H1, H2, Muted, Screen } from '../../components/ui';
 import { colors, radius, space } from '../../theme';
 
-const FIELDS = ['name', 'description', 'city', 'address', 'phone', 'logo', 'coverImage', 'whatsappNotifications', 'deliveryAreas', 'deliveryLeadTime', 'assemblyAvailable', 'pickupAvailable'];
+const FIELDS = ['name', 'description', 'city', 'address', 'phone', 'googleMapsUrl', 'logo', 'coverImage', 'whatsappNotifications', 'deliveryAreas', 'assemblyAvailable', 'pickupAvailable'];
 
 export default function ShopForm() {
   const { shop, refreshShop } = useAuth();
@@ -64,9 +64,14 @@ export default function ShopForm() {
         <Field style={{ flex: 1 }} label="Phone" value={form.phone} onChangeText={setPhone} keyboardType="phone-pad" />
       </View>
       <Field label="Address" value={form.address} onChangeText={set('address')} />
+      <Card style={{ marginVertical: space(3), backgroundColor: colors.accentSkySoft }}>
+        <H2 style={{ fontSize: 18, marginBottom: space(2) }}>Add location</H2>
+        <Field label="Google Maps location link" value={form.googleMapsUrl} onChangeText={set('googleMapsUrl')}
+          placeholder="https://maps.app.goo.gl/…" keyboardType="url" autoCapitalize="none" autoCorrect={false}
+          maxLength={2048} hint="Open your shop in Google Maps → Share → Copy link, then paste it here. Buyers can open this location from your shop page. Optional; leave blank to remove it." />
+      </Card>
       <Text style={{ color: colors.ink, fontSize: 18, fontWeight: '800', marginTop: space(3), marginBottom: space(2) }}>Delivery & collection</Text>
       <Field label="Delivery areas" value={form.deliveryAreas} onChangeText={set('deliveryAreas')} placeholder="e.g. Mumbai, Navi Mumbai" />
-      <Field label="Typical delivery time" value={form.deliveryLeadTime} onChangeText={set('deliveryLeadTime')} placeholder="e.g. 3–5 business days" />
       {[['assemblyAvailable', 'Assembly available'], ['pickupAvailable', 'Customer pickup available']].map(([key, label]) => (
         <Pressable key={key} onPress={() => set(key)(!form[key])} style={{ flexDirection: 'row', alignItems: 'center', gap: 9, marginBottom: space(2) }}>
           <Ionicons name={form[key] ? 'checkbox' : 'square-outline'} size={22} color={colors.accent} />

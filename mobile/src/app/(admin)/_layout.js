@@ -7,9 +7,11 @@ import { colors } from '../../theme';
 export default function AdminTabs() {
   return (
     <Tabs
+      initialRouteName="admin-home"
       screenOptions={{
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.muted,
+        tabBarLabelStyle: { fontSize: 10 },
         tabBarStyle: { backgroundColor: colors.card, borderTopColor: colors.border },
         headerStyle: { backgroundColor: colors.bg },
         headerShadowVisible: false,
@@ -17,7 +19,9 @@ export default function AdminTabs() {
         sceneStyle: { backgroundColor: colors.bg },
       }}
     >
+      <Tabs.Screen name="admin-home" options={{ title: 'Home', headerShown: false, tabBarIcon: (p) => <TabIcon name="home" {...p} /> }} />
       <Tabs.Screen name="overview" options={{ title: 'Overview', tabBarIcon: (p) => <TabIcon name="grid" {...p} /> }} />
+      <Tabs.Screen name="shop-catalogue" options={{ title: 'Shop', tabBarIcon: (p) => <TabIcon name="bag-handle" {...p} /> }} />
       <Tabs.Screen name="all-enquiries" options={{ title: 'Enquiries', tabBarIcon: (p) => <TabIcon name="chatbubbles" {...p} /> }} />
       <Tabs.Screen name="shops" options={{ title: 'Shops', tabBarIcon: (p) => <TabIcon name="storefront" {...p} /> }} />
       <Tabs.Screen name="users" options={{ title: 'Users', tabBarIcon: (p) => <TabIcon name="people" {...p} /> }} />

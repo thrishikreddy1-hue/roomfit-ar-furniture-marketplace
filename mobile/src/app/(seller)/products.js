@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../../lib/api';
 import { assetUrl } from '../../lib/config';
+import { dims } from '../../lib/format';
 import { useAsync } from '../../lib/useAsync';
 import { useLiveRefresh } from '../../lib/live';
 import { useAuth } from '../../context/AuthContext';
@@ -59,7 +60,7 @@ export default function SellerProducts() {
           <Image source={{ uri: assetUrl(p.images?.[0]) }} style={styles.thumb} />
           <View style={{ flex: 1 }}>
             <Text style={styles.name} numberOfLines={1}>{p.name}</Text>
-            <Muted style={{ fontSize: 12 }}>{p.category} · {p.dimensions.width}×{p.dimensions.depth}×{p.dimensions.height} cm</Muted>
+            <Muted style={{ fontSize: 12 }}>{p.category} · {dims(p.dimensions)}</Muted>
             <View style={styles.meta}>
               <Text style={[styles.stock, p.stock <= 2 && { color: colors.danger }]}>{p.stock} in stock</Text>
               {p.modelUrl ? <Badge label="Ready for AR" icon="cube-outline" tone="success" /> : <Badge label="AR being prepared" icon="time-outline" />}

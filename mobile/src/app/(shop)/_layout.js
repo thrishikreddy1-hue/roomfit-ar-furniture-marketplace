@@ -23,7 +23,7 @@ export default function ShopTabs() {
       <Tabs.Protected guard={privateViewingEnabled}>
         <Tabs.Screen name="private-viewing" options={{ title: 'Private viewing', tabBarIcon: (p) => <TabIcon name="cube" {...p} /> }} />
       </Tabs.Protected>
-      <Tabs.Screen name="browse" options={{ title: 'Discover', tabBarIcon: (p) => <TabIcon name="cube" {...p} /> }} />
+      <Tabs.Screen name="browse" options={{ title: 'Shop', tabBarIcon: (p) => <TabIcon name="bag-handle" {...p} /> }} />
       <Tabs.Screen name="enquiries" options={{ title: 'My messages', tabBarIcon: (p) => <TabIcon name="chatbubbles" {...p} /> }} />
       <Tabs.Screen name="account" options={{ title: 'Account', tabBarIcon: (p) => <TabIcon name="person" {...p} /> }} />
     </Tabs>

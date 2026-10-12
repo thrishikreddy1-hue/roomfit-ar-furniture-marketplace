@@ -21,7 +21,7 @@ const NEXT = {
 
 export default function EnquiryDetail() {
   const { id } = useLocalSearchParams();
-  const { isSeller, isAdmin } = useAuth();
+  const { isSeller, isAdmin: hasAdminRole, user } = useAuth();
   const { data: e, loading, error, reload } = useAsync(() => api.enquiry(id).then((r) => r.enquiry), [id]);
   // Both sides see status changes as they happen.
   useLiveRefresh(reload, (ev) => ev.enquiryId === id);
@@ -30,6 +30,8 @@ export default function EnquiryDetail() {
 
   if (loading) return <Loading />;
   if (!e) return <Screen><ErrorBox error={error} onRetry={reload} /></Screen>;
+  // Personal shopping enquiries use the buyer view, not moderation controls.
+  const isAdmin = hasAdminRole && e.buyerId !== user?.id;
 
   const change = async (status) => {
     setBusy(status);

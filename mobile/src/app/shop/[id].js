@@ -7,6 +7,7 @@ import { assetUrl } from '../../lib/config';
 import { useAsync } from '../../lib/useAsync';
 import { useLiveRefresh } from '../../lib/live';
 import { useAuth } from '../../context/AuthContext';
+import { openLink } from '../../lib/contact';
 import ProductCard from '../../components/ProductCard';
 import { Button, Empty, ErrorBox, Field, H1, H2, Loading, Muted, Screen } from '../../components/ui';
 import { colors, radius, space } from '../../theme';
@@ -58,6 +59,8 @@ export default function ShopDetail() {
               </View>
             </View>
             {shop.description ? <Muted style={styles.description}>{shop.description}</Muted> : null}
+            {!!shop.googleMapsUrl && <Button title="View shop location" icon="location-outline" variant="outline"
+              style={{ marginTop: space(3) }} onPress={() => openLink(shop.googleMapsUrl)} />}
             <View style={styles.countPill}><Text style={styles.count}>{products.length} curated {products.length === 1 ? 'piece' : 'pieces'}</Text></View>
             <View style={styles.reviewCard}>
               <H2 style={{ fontSize: 16 }}>Shop reviews</H2>
@@ -68,7 +71,7 @@ export default function ShopDetail() {
                 {reviewPage > 1 && <Button small variant="outline" title="Previous reviews" onPress={() => setReviewPage((page) => page - 1)} />}
                 {reviews.data?.hasMore && <Button small variant="outline" title="More reviews" onPress={() => setReviewPage((page) => page + 1)} />}
               </View>
-              {user?.role === 'buyer' && !shop.isSample && <ReviewForm shopId={shop.id} onSaved={() => { if (reviewPage === 1) return reviews.reload(); setReviewPage(1); }} />}
+              {['buyer', 'admin'].includes(user?.role) && !shop.isSample && <ReviewForm shopId={shop.id} onSaved={() => { if (reviewPage === 1) return reviews.reload(); setReviewPage(1); }} />}
             </View>
           </View>
         }
