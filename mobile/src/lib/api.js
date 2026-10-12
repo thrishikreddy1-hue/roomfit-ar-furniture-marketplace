@@ -84,6 +84,7 @@ export const api = {
   register: (payload) => request('POST', '/api/auth/register', { body: payload }),
   me: () => request('GET', '/api/auth/me'),
   health: () => request('GET', '/api/health'),
+  settings: () => request('GET', '/api/settings'),
   // catalogue
   categories: () => request('GET', '/api/products/categories'),
   products: (query) => request('GET', '/api/products', { query }),
@@ -118,6 +119,8 @@ export const api = {
   setProductAr: (id, data) => request('PUT', `/api/admin/products/${id}/ar`, { body: data }),
   // admin: operations oversight and moderation
   adminOverview: () => request('GET', '/api/admin/overview'),
+  adminSettings: () => request('GET', '/api/admin/settings'),
+  saveAdminSettings: (settings) => request('PUT', '/api/admin/settings', { body: settings }),
   adminActivity: (query) => request('GET', '/api/admin/activity', { query }),
   adminEnquiries: (query) => request('GET', '/api/admin/enquiries', { query }),
   deleteEnquiry: (id) => request('DELETE', `/api/admin/enquiries/${id}`),

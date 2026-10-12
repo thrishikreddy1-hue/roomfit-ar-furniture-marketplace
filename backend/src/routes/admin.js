@@ -11,6 +11,25 @@ const { enquiryChanged } = require('./enquiries');
 const router = express.Router();
 router.use(requireRole('admin'));
 
+// Only admins can change the shared storefront options. Public reads expose flags only.
+router.get('/settings', async (_req, res) => {
+  res.set('Cache-Control', 'no-store');
+  res.json({ settings: await require('../storefrontSettings').storefrontSettings() });
+});
+
+router.put('/settings', async (req, res) => {
+  const { privateViewingEnabled } = req.body || {};
+  if (typeof privateViewingEnabled !== 'boolean') {
+    return res.status(400).json({ error: 'Choose whether Private viewing is shown or hidden' });
+  }
+  await db.settings.upsert('storefront', { privateViewingEnabled });
+  await activity.record('settings.updated', req.user,
+    `${req.user.name} ${privateViewingEnabled ? 'enabled' : 'hid'} Private viewing`);
+  publish('settings.updated');
+  res.set('Cache-Control', 'no-store');
+  res.json({ settings: await require('../storefrontSettings').storefrontSettings() });
+});
+
 const DAY = 24 * 60 * 60 * 1000;
 const age = (iso) => Date.now() - Date.parse(iso);
 const newestFirst = (a, b) => b.createdAt.localeCompare(a.createdAt);

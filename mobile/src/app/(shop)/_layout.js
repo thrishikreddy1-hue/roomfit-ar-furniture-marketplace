@@ -1,8 +1,12 @@
 import { Tabs } from 'expo-router';
 import TabIcon from '../../components/TabIcon';
 import { colors } from '../../theme';
+import { useSettings } from '../../context/SettingsContext';
+import { useLiveRefresh } from '../../lib/live';
 
 export default function ShopTabs() {
+  const { privateViewingEnabled, reload } = useSettings();
+  useLiveRefresh(reload, (event) => event.type === 'settings.updated');
   return (
     <Tabs
       screenOptions={{
@@ -16,7 +20,9 @@ export default function ShopTabs() {
       }}
     >
       <Tabs.Screen name="index" options={{ title: 'Home', headerShown: false, tabBarIcon: (p) => <TabIcon name="home" {...p} /> }} />
-      <Tabs.Screen name="private-viewing" options={{ title: 'Private viewing', tabBarIcon: (p) => <TabIcon name="cube" {...p} /> }} />
+      <Tabs.Protected guard={privateViewingEnabled}>
+        <Tabs.Screen name="private-viewing" options={{ title: 'Private viewing', tabBarIcon: (p) => <TabIcon name="cube" {...p} /> }} />
+      </Tabs.Protected>
       <Tabs.Screen name="browse" options={{ title: 'Discover', tabBarIcon: (p) => <TabIcon name="cube" {...p} /> }} />
       <Tabs.Screen name="enquiries" options={{ title: 'My messages', tabBarIcon: (p) => <TabIcon name="chatbubbles" {...p} /> }} />
       <Tabs.Screen name="account" options={{ title: 'Account', tabBarIcon: (p) => <TabIcon name="person" {...p} /> }} />

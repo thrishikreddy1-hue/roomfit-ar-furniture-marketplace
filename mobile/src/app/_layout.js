@@ -2,12 +2,14 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from '../context/AuthContext';
+import { SettingsProvider, useSettings } from '../context/SettingsContext';
 import { Loading } from '../components/ui';
 import { colors } from '../theme';
 
 function RootStack() {
   const { ready, user, isSeller, isAdmin } = useAuth();
-  if (!ready) return <Loading />;
+  const { ready: settingsReady } = useSettings();
+  if (!ready || !settingsReady) return <Loading />;
 
   return (
     <Stack
@@ -42,6 +44,7 @@ function RootStack() {
         <Stack.Screen name="admin/shop/[id]" options={{ title: 'Shop' }} />
         <Stack.Screen name="admin/user/[id]" options={{ title: 'Account' }} />
         <Stack.Screen name="admin/activity" options={{ title: 'Activity log' }} />
+        <Stack.Screen name="admin/app-settings" options={{ title: 'App settings' }} />
       </Stack.Protected>
 
       <Stack.Protected guard={!!user}>
@@ -60,8 +63,10 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <AuthProvider>
-        <StatusBar style="dark" />
-        <RootStack />
+        <SettingsProvider>
+          <StatusBar style="dark" />
+          <RootStack />
+        </SettingsProvider>
       </AuthProvider>
     </SafeAreaProvider>
   );

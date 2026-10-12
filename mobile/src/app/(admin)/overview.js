@@ -7,7 +7,7 @@ import { useAsync } from '../../lib/useAsync';
 import { useLiveRefresh } from '../../lib/live';
 import ActivityFeed from '../../components/ActivityFeed';
 import DemoModeNotice from '../../components/DemoModeNotice';
-import { Card, ErrorBox, H2, LiveBadge, Loading, Muted, Screen } from '../../components/ui';
+import { Button, Card, ErrorBox, H2, LiveBadge, Loading, Muted, Screen } from '../../components/ui';
 import { colors, radius, space } from '../../theme';
 
 // Everything happening across RoomFit at a glance: KPIs, what needs attention, and the live activity log.
@@ -55,6 +55,9 @@ export default function Overview() {
       </View>
       <DemoModeNotice />
       <ErrorBox error={error} onRetry={reload} />
+
+      <Button title="App settings" icon="options-outline" variant="outline"
+        style={{ marginBottom: space(3) }} onPress={() => router.push('/admin/app-settings')} />
 
       <View style={styles.grid}>
         {kpis.map((k) => (

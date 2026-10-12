@@ -9,7 +9,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
-const COLLECTIONS = ['users', 'shops', 'products', 'enquiries', 'activity', 'wishlists', 'reviews'];
+const COLLECTIONS = ['users', 'shops', 'products', 'enquiries', 'activity', 'wishlists', 'reviews', 'settings'];
 const newId = () => crypto.randomUUID();
 const now = () => new Date().toISOString();
 const matches = (row, query = {}) => Object.entries(query).every(([k, v]) => row[k] === v);
@@ -59,6 +59,10 @@ function fileAdapter(file) {
         Object.assign(row, patch, { updatedAt: now() });
         save();
         return row;
+      },
+      async upsert(id, patch) {
+        const existing = rows().find((r) => r.id === id);
+        return existing ? this.update(id, patch) : this.insert({ ...patch, id });
       },
       async increment(id, field, amount = 1) {
         const row = rows().find((r) => r.id === id);
@@ -154,6 +158,14 @@ function mongoAdapter(uri) {
           { id },
           { $set: { ...patch, updatedAt: now() } },
           { returnDocument: 'after', ...noMongoId },
+        );
+      },
+      async upsert(id, patch) {
+        // A stable Mongo _id prevents duplicate singleton settings on concurrent first saves.
+        return (await col()).findOneAndUpdate(
+          { _id: id },
+          { $set: { ...patch, id, updatedAt: now() }, $setOnInsert: { createdAt: now() } },
+          { upsert: true, returnDocument: 'after', ...noMongoId },
         );
       },
       async increment(id, field, amount = 1) {

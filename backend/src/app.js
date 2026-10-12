@@ -54,6 +54,10 @@ function createApp() {
     });
   }
   app.use('/api/auth', require('./routes/auth'));
+  app.get('/api/settings', async (_req, res) => {
+    res.set('Cache-Control', 'no-store');
+    res.json({ settings: await require('./storefrontSettings').storefrontSettings() });
+  });
   app.use('/api/shops', require('./routes/shops'));
   app.use('/api/products', require('./routes/products'));
   app.use('/api/enquiries', require('./routes/enquiries'));

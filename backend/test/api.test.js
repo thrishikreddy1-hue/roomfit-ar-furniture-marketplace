@@ -714,3 +714,37 @@ test('analytics: explicit view/AR events, atomic counters, and seller isolation'
   assert.equal((await api('POST', path, { body: { event: 'view' } })).status, 404);
   assert.equal((await fetch(`${base}/ar/${product.id}`)).status, 404);
 });
+
+test('storefront settings: admin-only, persistent, reversible Private viewing flag', async () => {
+  const db = require('../src/db');
+  const path = '/api/admin/settings';
+  const admin = await login('admin@roomfit.test');
+  const buyer = await login('buyer@roomfit.test');
+  const seller = await login('seller@roomfit.test');
+  assert.deepEqual((await api('GET', '/api/settings')).body, { settings: { privateViewingEnabled: true } });
+  assert.equal((await api('GET', path)).status, 401);
+  for (const token of [undefined, buyer, seller]) {
+    assert.equal((await api('PUT', path, { token, body: { privateViewingEnabled: false } })).status, token ? 403 : 401);
+  }
+  for (const body of [{}, { privateViewingEnabled: 'false' }, { privateViewingEnabled: null }]) {
+    assert.equal((await api('PUT', path, { token: admin, body })).status, 400);
+  }
+  assert.equal(await db.settings.byId('storefront'), null);
+  const guestStream = await openStream();
+  const hidden = await api('PUT', path, { token: admin, body: { privateViewingEnabled: false, extra: 'not public' } });
+  assert.equal(hidden.status, 200);
+  assert.deepEqual(hidden.body, { settings: { privateViewingEnabled: false } });
+  await waitFor(() => guestStream.events.some((e) => e.type === 'settings.updated'));
+  guestStream.close();
+  const row = await db.settings.byId('storefront');
+  assert.equal(row.privateViewingEnabled, false);
+  assert.equal(row.extra, undefined);
+  assert.deepEqual((await api('GET', '/api/settings')).body, hidden.body);
+  assert.deepEqual((await api('GET', path, { token: admin })).body, hidden.body);
+  const repeated = await Promise.all(Array.from({ length: 6 }, () => api('PUT', path, { token: admin, body: { privateViewingEnabled: true } })));
+  assert.ok(repeated.every((r) => r.status === 200));
+  assert.equal((await db.settings.findMany()).length, 1);
+  assert.equal((await db.settings.byId('storefront')).createdAt, row.createdAt);
+  assert.deepEqual((await api('GET', '/api/settings')).body, { settings: { privateViewingEnabled: true } });
+  assert.ok((await db.activity.findMany({ type: 'settings.updated' })).length >= 2);
+});
