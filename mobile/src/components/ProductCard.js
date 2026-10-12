@@ -26,6 +26,7 @@ export default function ProductCard({ product, width, style }) {
             <Badge label="View in AR" icon="cube-outline" tone="dark" />
           </View>
         )}
+        {product.isSample && <View style={styles.sampleBadge}><Badge label="Sample" tone="accent" /></View>}
       </View>
       <View style={styles.content}>
         <Text style={styles.collection} numberOfLines={1}>{product.category || 'Curated piece'}</Text>
@@ -57,6 +58,7 @@ const styles = StyleSheet.create({
   },
   image: { width: '100%', height: '100%' },
   badge: { position: 'absolute', left: 8, top: 8 },
+  sampleBadge: { position: 'absolute', right: 8, bottom: 8 },
   content: { padding: 13 },
   collection: { fontSize: 10, fontWeight: '700', color: colors.accent, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 5 },
   name: { fontSize: 16, fontWeight: '800', color: colors.ink, letterSpacing: -0.3 },

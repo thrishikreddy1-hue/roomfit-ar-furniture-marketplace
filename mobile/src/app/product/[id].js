@@ -137,7 +137,10 @@ export default function ProductDetail() {
           </Card>
         )}
 
-        <Card style={{ marginTop: space(4) }}>
+        {p.isSample ? <Card style={{ marginTop: space(4), backgroundColor: colors.accentSoft }}>
+          <H2 style={{ fontSize: 16 }}>Sample preview · not for sale</H2>
+          <Muted style={{ marginTop: 4 }}>Explore the images, 3D model, and room-fit tools. This showcase is not a real seller listing.</Muted>
+        </Card> : <Card style={{ marginTop: space(4) }}>
           <H2 style={{ fontSize: 16 }}>Interested in this piece?</H2>
           <Muted style={{ marginTop: 2 }}>Enquire and {p.shop?.name || 'the shop'} will share the price, availability and delivery details.</Muted>
           <Button title="Enquire now" icon="chatbubble-ellipses-outline" style={{ marginTop: space(3) }}
@@ -150,7 +153,7 @@ export default function ProductDetail() {
                 onPress={() => openLink(whatsappUrl(shopPhone, `Hi, I'm interested in the ${p.name} I saw on RoomFit. Could you share the price and availability?`))} />
             </View>
           )}
-        </Card>
+        </Card>}
 
         {(p.shop?.deliveryAreas || p.shop?.deliveryLeadTime || p.shop?.assemblyAvailable || p.shop?.pickupAvailable) && (
           <Card style={{ marginTop: space(4) }}>
@@ -175,6 +178,9 @@ export default function ProductDetail() {
           {p.material ? <Detail label="Material" value={p.material} /> : null}
           {p.color ? <Detail label="Colour" value={p.color} /> : null}
           {p.description ? <Muted style={{ marginTop: space(3) }}>{p.description}</Muted> : null}
+          {p.assetAttribution && <Muted style={{ marginTop: space(3), fontSize: 12 }}>{p.assetAttribution}</Muted>}
+          {p.assetSourceUrl && <Button small variant="outline" title="View asset source & credits" style={{ marginTop: 8 }} onPress={() => openLink(p.assetSourceUrl)} />}
+          {p.assetLicenseUrl && <Button small variant="outline" title="View asset license" style={{ marginTop: 8 }} onPress={() => openLink(p.assetLicenseUrl)} />}
         </Card>
 
         <View style={{ marginTop: space(4) }}>

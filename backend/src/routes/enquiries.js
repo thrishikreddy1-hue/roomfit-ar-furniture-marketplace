@@ -26,6 +26,7 @@ router.post('/', optionalAuth, async (req, res) => {
   const body = req.body || {};
   const product = await db.products.byId(body.productId);
   if (!product) return res.status(404).json({ error: 'Product not found' });
+  if (product.isSample) return res.status(400).json({ error: 'Sample previews are not for sale. Choose a real shop listing to send an enquiry.' });
   const shop = await db.shops.byId(product.shopId);
   if (!shop) return res.status(404).json({ error: 'Shop not found' });
   if (shop.suspended) return res.status(403).json({ error: "This shop isn't taking enquiries right now" });

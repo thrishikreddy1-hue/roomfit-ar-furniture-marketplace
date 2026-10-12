@@ -68,7 +68,7 @@ export default function ShopDetail() {
                 {reviewPage > 1 && <Button small variant="outline" title="Previous reviews" onPress={() => setReviewPage((page) => page - 1)} />}
                 {reviews.data?.hasMore && <Button small variant="outline" title="More reviews" onPress={() => setReviewPage((page) => page + 1)} />}
               </View>
-              {user?.role === 'buyer' && <ReviewForm shopId={shop.id} onSaved={() => { if (reviewPage === 1) return reviews.reload(); setReviewPage(1); }} />}
+              {user?.role === 'buyer' && !shop.isSample && <ReviewForm shopId={shop.id} onSaved={() => { if (reviewPage === 1) return reviews.reload(); setReviewPage(1); }} />}
             </View>
           </View>
         }

@@ -12,3 +12,7 @@ test('legacy listings and zero-stock listings use an honest fallback', () => {
   assert.equal(availabilityLabel({ availability: 'available', stock: 0 }), 'Ask about availability');
   assert.equal(availabilityLabel({}), 'Ask about availability');
 });
+
+test('sample previews never imply a purchasable stock status', () => {
+  assert.equal(availabilityLabel({ isSample: true, stock: 10, availability: 'available' }), 'Sample preview');
+});

@@ -584,6 +584,22 @@ async function featureShop(label) {
   return { token, shop, product: result.body.product };
 }
 
+test('sample catalogue is visible with photos but cannot receive sales enquiries', async () => {
+  const db = require('../src/db');
+  const samples = require('../src/sampleCatalogue');
+  await db.shops.insert(samples.shops[0]);
+  await db.products.insert(samples.products[0]);
+  const catalogue = await api('GET', '/api/products');
+  const sample = catalogue.body.products.find((product) => product.id === samples.products[0].id);
+  assert.equal(sample.isSample, true);
+  assert.ok(sample.images[0].startsWith('https://'));
+  assert.ok(sample.modelUrl.endsWith('.glb'));
+  const enquiry = await api('POST', '/api/enquiries', { body: { productId: sample.id, name: 'Buyer', phone: '9876543210' } });
+  assert.equal(enquiry.status, 400);
+  assert.match(enquiry.body.error, /not for sale/);
+  assert.equal((await db.enquiries.findMany({ productId: sample.id })).length, 0);
+});
+
 test('wishlist: saved state survives product reads, stays private, and can be removed', async () => {
   const { token: seller, product, shop } = await featureShop('wishlist');
   const buyer = await login('buyer@roomfit.test');

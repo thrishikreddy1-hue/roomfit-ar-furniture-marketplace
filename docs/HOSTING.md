@@ -44,7 +44,7 @@ The Vercel CLI must be signed in and the directory linked to this project. Chang
 4. Verify a shop enquiry reaches the right seller and unrelated accounts cannot access it.
 5. Complete the [phone AR checklist](DEVICE_TESTING.md) after an admin attaches a suitable model.
 
-The live database starts empty; demo credentials are not created. Admin accounts require a separate setup with the intended administrator's credentials. Never seed a live database: the seed script resets its records.
+The live database started empty; an explicitly requested [sample catalogue](SAMPLE_CATALOGUE.md) supplies illustrative furniture without creating demo credentials. Admin accounts require a separate setup with the intended administrator's credentials. Never seed a live database: the seed script resets its records.
 
 ## Limits
 
