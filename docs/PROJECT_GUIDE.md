@@ -29,7 +29,7 @@ RoomFit uses enquiries rather than a checkout or payment system.
 
 - Buyers can save products to their account's wishlist.
 - Sellers can set available, reserved, or sold status and shop delivery details.
-- Seller analytics show product views and the most-viewed listing. Views on AR-ready listings are not a measurement of actual AR sessions.
+- Seller analytics track explicit product-page visits, taps on the AR placement button, and confirmed WebXR session starts separately. External Scene Viewer and Quick Look apps do not report placement success back to this page. Counters measure events, not unique people.
 - Sellers can move photos earlier in the list; the first photo is the cover.
 - Signed-in buyers who have enquired with a shop can submit or update a shop review. This checks an enquiry relationship, not a verified purchase.
 
@@ -37,10 +37,16 @@ RoomFit uses enquiries rather than a checkout or payment system.
 
 For visual styling, start with `mobile/src/theme.js` and the relevant screen. For new API behavior, start with `backend/src/routes/` and update `mobile/src/lib/api.js`. Keep persistence changes compatible with both adapters in `backend/src/db.js`.
 
+## Verification and remaining device checks
+
+`npm test` runs backend integration tests with JSON and MongoDB, viewer event-handler tests, and availability-label tests. `npm run check:app` runs lint, TypeScript configuration checks, and the web export. This JavaScript app uses selective `@ts-check` for annotated helpers; it is not fully type-checked yet.
+
+See [Device testing](DEVICE_TESTING.md) before shipping changes to AR.
+
 ## Suggested next milestones
 
-- Add focused regression coverage for wishlist, review eligibility, photo ordering, and delivery validation.
-- Track actual AR sessions and distinct visitors for better analytics.
+- Add UI automation for complete buyer and seller journeys.
+- Track distinct visitors and add analytics abuse protection.
 - Add review moderation and pagination.
 - Test buyer and seller flows on physical Android and iOS devices.
 

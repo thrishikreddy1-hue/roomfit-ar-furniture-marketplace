@@ -42,6 +42,7 @@ export default function Dashboard() {
     { icon: 'mail-unread-outline', label: 'New messages', value: enquiries.filter((e) => e.status === 'new').length },
     { icon: 'cube-outline', label: 'Products listed', value: products.length },
     { icon: 'eye-outline', label: 'Product views', value: data?.analytics?.productViews || 0 },
+    { icon: 'scan-outline', label: 'AR launches', value: data?.analytics?.arLaunches || 0 },
   ];
   const thisWeek = data?.thisWeek || 0;
 
@@ -110,9 +111,13 @@ export default function Dashboard() {
         <Card style={{ marginTop: space(3) }}>
           <Text style={styles.kicker}>SHOPPER INTEREST</Text>
           <H2 style={{ fontSize: 16, marginTop: 2 }}>{data.analytics.mostViewed.name}</H2>
-          <Muted style={{ marginTop: 3 }}>{data.analytics.mostViewed.viewCount || 0} product views · {data.analytics.arViews || 0} views on AR-ready pieces</Muted>
+          <Muted style={{ marginTop: 3 }}>{data.analytics.mostViewed.viewCount || 0} product views</Muted>
         </Card>
       )}
+
+      <Muted style={{ marginTop: space(3), fontSize: 12 }}>
+        AR launches count taps on “Place in my room.” {data?.analytics?.arSessions || 0} browser AR sessions started. External phone viewers do not report successful placement.
+      </Muted>
 
       {(noPhone || noPhotos.length > 0 || unavailable.length > 0) && (
         <Card style={{ marginTop: space(3) }}>

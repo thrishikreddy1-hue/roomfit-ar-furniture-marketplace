@@ -11,7 +11,7 @@ import { Button, Card, Chip, ErrorBox, Field, H2, Loading, Muted, Screen } from 
 import { colors, space } from '../../theme';
 
 const EMPTY = {
-  name: '', category: '', stock: '1', material: '', color: '', description: '',
+  name: '', category: '', stock: '1', availability: 'available', material: '', color: '', description: '',
   width: '', depth: '', height: '', images: [],
 };
 
@@ -76,12 +76,19 @@ function ProductEditor({ id, product }) {
     }
   };
   const moveImage = async (from, to) => {
+    if (busy) return;
+    setError(null);
+    setBusy('photos');
     const images = [...form.images];
     const [image] = images.splice(from, 1);
     images.splice(to, 0, image);
-    setForm((f) => ({ ...f, images }));
-    if (editing) {
-      try { await api.reorderProductImages(id, images); } catch (e) { setError(e); }
+    try {
+      if (editing) await api.reorderProductImages(id, images);
+      setForm((f) => ({ ...f, images }));
+    } catch (e) {
+      setError(e);
+    } finally {
+      setBusy(null);
     }
   };
   const photos = usePhotoUploads(addImage, { count: form.images.length });
@@ -145,10 +152,10 @@ function ProductEditor({ id, product }) {
             ? 'Photos go live on your listing as soon as they finish uploading. The first photo is the cover.'
             : 'Photos upload straight away and go live when you publish. The first photo is the cover.'}
         </Muted>
-        <PhotoUploader images={form.images} photos={photos} onRemove={removeImage} onMove={moveImage} removing={busy} />
+        <PhotoUploader images={form.images} photos={photos} onRemove={removeImage} onMove={moveImage} removing={busy} disabled={!!busy || photos.uploading} />
         <View style={[styles.pair, { alignItems: 'flex-end', marginTop: space(3) }]}>
           <Field style={{ flex: 1, marginBottom: 0 }} label="…or paste an image URL" value={imageUrl} onChangeText={setImageUrl} autoCapitalize="none" />
-          <Button small variant="outline" title="Add" disabled={!imageUrl.trim()} onPress={addImageUrl} />
+          <Button small variant="outline" title="Add" disabled={!imageUrl.trim() || !!busy || photos.uploading} onPress={addImageUrl} />
         </View>
 
         <H2 style={styles.section}>Basics</H2>

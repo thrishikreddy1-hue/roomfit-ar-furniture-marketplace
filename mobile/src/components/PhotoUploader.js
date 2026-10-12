@@ -61,7 +61,7 @@ export function usePhotoUploads(onUploaded, { count, max = 12 }) {
   };
 }
 
-export default function PhotoUploader({ images, photos, onRemove, onMove, removing }) {
+export default function PhotoUploader({ images, photos, onRemove, onMove, removing, disabled = false }) {
   return (
     <View>
       <View style={styles.grid}>
@@ -69,8 +69,8 @@ export default function PhotoUploader({ images, photos, onRemove, onMove, removi
           <View key={url} style={styles.tile}>
             <Image source={{ uri: assetUrl(url) }} style={styles.photo} />
             {i === 0 && <Text style={styles.cover}>Cover</Text>}
-            {onMove && i > 0 && <Pressable style={styles.move} onPress={() => onMove(i, i - 1)} accessibilityLabel="Move photo earlier"><Ionicons name="arrow-back" size={13} color="#fff" /></Pressable>}
-            <Pressable style={styles.remove} onPress={() => onRemove(url)} disabled={removing === url} accessibilityLabel="Remove photo">
+            {onMove && i > 0 && <Pressable style={styles.move} disabled={disabled} onPress={() => onMove(i, i - 1)} accessibilityLabel="Move photo earlier"><Ionicons name="arrow-back" size={13} color="#fff" /></Pressable>}
+            <Pressable style={styles.remove} onPress={() => onRemove(url)} disabled={disabled || removing === url} accessibilityLabel="Remove photo">
               <Ionicons name={removing === url ? 'hourglass-outline' : 'close'} size={14} color="#fff" />
             </Pressable>
           </View>
@@ -101,8 +101,8 @@ export default function PhotoUploader({ images, photos, onRemove, onMove, removi
       </View>
 
       <View style={styles.actions}>
-        <Button small variant="outline" icon="images-outline" title="Add photos" style={{ flex: 1 }} onPress={() => photos.pick('library')} />
-        <Button small variant="outline" icon="camera-outline" title="Take photo" style={{ flex: 1 }} onPress={() => photos.pick('camera')} />
+        <Button small variant="outline" icon="images-outline" title="Add photos" disabled={disabled} style={{ flex: 1 }} onPress={() => photos.pick('library')} />
+        <Button small variant="outline" icon="camera-outline" title="Take photo" disabled={disabled} style={{ flex: 1 }} onPress={() => photos.pick('camera')} />
       </View>
       {photos.pending.some((p) => p.error) && (
         <ErrorBox error={new Error(photos.pending.find((p) => p.error).error)} />

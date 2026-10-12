@@ -5,14 +5,20 @@ const { requireRole } = require('../middleware/auth');
 const router = express.Router();
 
 router.get('/shop/:shopId', async (req, res) => {
-  const reviews = await db.reviews.findMany({ shopId: req.params.shopId }, { newestFirst: true, limit: 20 });
-  const average = reviews.length ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length : null;
-  res.json({ reviews, average, count: reviews.length });
+  const shop = await db.shops.byId(req.params.shopId);
+  if (!shop || shop.suspended) return res.status(404).json({ error: 'Shop not found' });
+  const all = await db.reviews.findMany({ shopId: shop.id }, { newestFirst: true });
+  const average = all.length ? all.reduce((sum, review) => sum + review.rating, 0) / all.length : null;
+  const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
+  const pageSize = 20;
+  const reviews = all.slice((page - 1) * pageSize, page * pageSize)
+    .map(({ buyerId, ...review }) => review);
+  res.json({ reviews, average, count: all.length, page, hasMore: page * pageSize < all.length });
 });
 
 router.post('/shop/:shopId', requireRole('buyer'), async (req, res) => {
   const shop = await db.shops.byId(req.params.shopId);
-  if (!shop) return res.status(404).json({ error: 'Shop not found' });
+  if (!shop || shop.suspended) return res.status(404).json({ error: 'Shop not found' });
   const rating = Number(req.body?.rating);
   const body = String(req.body?.body || '').trim();
   if (!Number.isInteger(rating) || rating < 1 || rating > 5) return res.status(400).json({ error: 'rating must be between 1 and 5' });

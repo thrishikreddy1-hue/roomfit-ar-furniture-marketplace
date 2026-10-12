@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Alert, FlatList, Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,6 +7,7 @@ import { assetUrl } from '../../lib/config';
 import { hasAr, openInRoom } from '../../lib/ar';
 import { callUrl, hasPhone, openLink, whatsappUrl } from '../../lib/contact';
 import { dims } from '../../lib/format';
+import { availabilityLabel } from '../../lib/availability.mjs';
 import { useAsync } from '../../lib/useAsync';
 import { useLiveRefresh } from '../../lib/live';
 import { useAuth } from '../../context/AuthContext';
@@ -21,19 +22,34 @@ const notify = (title, body) => (Platform.OS === 'web' ? window.alert(`${title}\
 export default function ProductDetail() {
   const { id } = useLocalSearchParams();
   const { user } = useAuth();
-  const { data, loading, error, reload } = useAsync(() => api.product(id), [id]);
+  const { data, loading, error, reload } = useAsync(() => api.product(id), [id, user?.id], { refetchOnFocus: true });
   // New photos from the shop, or a 3D model from the RoomFit team, appear without a refresh.
   useLiveRefresh(reload, (e) => e.type.startsWith('product.') && e.productId === id);
   const [view, setView] = useState('3d');
   const [scaleWarning, setScaleWarning] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [saveOverride, setSaveOverride] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const countedView = useRef(null);
+  const productId = data?.product?.id;
+  const buyerId = user?.id;
+  const saved = saveOverride && saveOverride.source === data && saveOverride.buyerId === buyerId
+    ? saveOverride.saved : Boolean(data?.saved);
+
+  useEffect(() => {
+    if (!productId || productId !== id || (user && user.role !== 'buyer')) return;
+    const key = `${productId}:${buyerId || 'guest'}`;
+    if (countedView.current === key) return;
+    countedView.current = key;
+    api.trackProductEvent(productId, 'view').catch(() => {});
+  }, [id, productId, buyerId, user]);
 
   if (loading) return <Loading />;
   if (!data) return <Screen><ErrorBox error={error} onRetry={reload} /></Screen>;
 
   const { product: p, related } = data;
   const ar = hasAr(p);
-  const available = p.stock > 0;
+  const availability = availabilityLabel(p);
+  const available = availability === 'Available';
   const shopPhone = p.shop?.phone;
   const shown = ar ? view : 'photo';
 
@@ -46,7 +62,16 @@ export default function ProductDetail() {
   };
   const toggleSaved = async () => {
     if (!user) return router.push('/login');
-    try { const result = await api.toggleWishlist(p.id); setSaved(result.saved); } catch (e) { notify('Could not save', e.message); }
+    if (saving) return;
+    setSaving(true);
+    try {
+      const result = await api.toggleWishlist(p.id);
+      setSaveOverride({ source: data, buyerId: user.id, saved: result.saved });
+    } catch (e) {
+      notify('Could not save', e.message);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -81,9 +106,10 @@ export default function ProductDetail() {
           <View style={styles.statusRow}>
             <Text style={styles.onRequest}>Price on request</Text>
             <Text style={[styles.stock, { color: available ? colors.success : colors.warn }]}>
-              · {available ? 'Available' : 'Ask about availability'}
+              · {availability}
             </Text>
-            <Pressable onPress={toggleSaved} style={styles.saveBtn} accessibilityLabel="Save product">
+            <Pressable onPress={toggleSaved} disabled={saving} style={[styles.saveBtn, saving && { opacity: 0.5 }]}
+              accessibilityRole="button" accessibilityLabel={saved ? 'Remove saved product' : 'Save product'} accessibilityState={{ busy: saving, selected: saved }}>
               <Ionicons name={saved ? 'heart' : 'heart-outline'} size={19} color={colors.accentRose} />
             </Pressable>
           </View>
@@ -100,7 +126,7 @@ export default function ProductDetail() {
             </Text>
             <View style={styles.arSteps}>
               <Text style={styles.arStep}>1. Open AR</Text>
-              <Text style={styles.arStep}>2. Point at the floor</Text>
+              <Text style={styles.arStep}>2. Point at the {p.placement === 'wall' ? 'wall' : 'floor'}</Text>
               <Text style={styles.arStep}>3. Walk around it</Text>
             </View>
             <Button title="View in your room (AR)" icon="camera-outline" variant="outline" onPress={launchAr}

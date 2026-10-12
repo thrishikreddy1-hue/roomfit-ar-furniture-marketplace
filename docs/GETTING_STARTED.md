@@ -55,11 +55,10 @@ Demo accounts are for local testing. Review the production configuration in the 
 
 ```bash
 npm test
-npm run lint --prefix mobile
-npm run build:web
+npm run check:app
 ```
 
-The root test command runs backend tests using the local adapter and a temporary MongoDB instance. The first MongoDB test run may download a large binary. The web export writes to `mobile/dist/`.
+The root test command runs backend tests using the local adapter and a temporary MongoDB instance, AR event-handler tests, and mobile availability tests. The first MongoDB test run may download a large binary. The app check runs lint, the configured TypeScript check, and a web export to `mobile/dist/`.
 
 ## 7. Understand what GitHub stores
 

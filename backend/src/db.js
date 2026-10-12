@@ -60,6 +60,13 @@ function fileAdapter(file) {
         save();
         return row;
       },
+      async increment(id, field, amount = 1) {
+        const row = rows().find((r) => r.id === id);
+        if (!row) return null;
+        row[field] = (row[field] || 0) + amount;
+        save();
+        return row;
+      },
       async addToList(id, field, value) {
         const row = rows().find((r) => r.id === id);
         if (!row) return null;
@@ -146,6 +153,13 @@ function mongoAdapter(uri) {
         return (await col()).findOneAndUpdate(
           { id },
           { $set: { ...patch, updatedAt: now() } },
+          { returnDocument: 'after', ...noMongoId },
+        );
+      },
+      async increment(id, field, amount = 1) {
+        return (await col()).findOneAndUpdate(
+          { id },
+          { $inc: { [field]: amount } },
           { returnDocument: 'after', ...noMongoId },
         );
       },

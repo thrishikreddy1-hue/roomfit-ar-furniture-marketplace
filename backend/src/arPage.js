@@ -14,7 +14,7 @@ function renderArPage(req, product) {
   const src = absolute(req, product.modelUrl);
   const iosSrc = absolute(req, product.iosModelUrl);
   const poster = absolute(req, product.images?.[0]);
-  // Lighting goes on the ceiling; everything else sits on the floor.
+  // Wall products use vertical placement; other products sit on the floor.
   const placement = product.placement === 'wall' ? 'wall' : 'floor';
 
   return `<!doctype html>
@@ -81,10 +81,10 @@ ${embed ? '' : `<header><h1>${esc(product.name)}</h1><p>Listed size: ${dims.widt
     <button class="toggle" id="dims-toggle" type="button">Show dimensions</button></div>
   <button class="reset" id="reset-view" type="button" aria-label="Reset model view">Reset view</button>
   <div class="gesture" id="gesture-hint">Drag to rotate · pinch to zoom</div>
-  <div id="ar-coaching">Move your phone slowly to help find the floor.</div>
+  <div id="ar-coaching">Move your phone slowly to help find the ${placement === 'wall' ? 'wall' : 'floor'}.</div>
 </model-viewer>
 ${embed ? '' : `<div class="note">
-  <b>How it works:</b> tap the button, point your camera at the floor, and the ${esc(product.name)} appears at its
+  <b>How it works:</b> tap the button, point your camera at the ${placement === 'wall' ? 'wall' : 'floor'}, and the ${esc(product.name)} appears at its
   real size so you can check it fits and suits your room. Walk around it, and pinch to rotate.
   <span id="no-ar"><br><br><b>AR is not available on this device.</b> Open this page on an ARCore-capable Android phone
   (Chrome) or an iPhone/iPad (Safari) to place it in your room. You can still rotate the 3D model here.</span>
@@ -96,6 +96,15 @@ ${embed ? '' : `<div class="note">
   const warnChip = document.getElementById('warn-chip');
   const noAr = document.getElementById('no-ar');
   const gestureHint = document.getElementById('gesture-hint');
+  const track = (event) => {
+    if (${embed}) return;
+    fetch('/api/products/${encodeURIComponent(product.id)}/events', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ event }), keepalive: true,
+    }).catch(() => {});
+  };
+  let sessionCounted = false;
+  mv.querySelector('[slot="ar-button"]')?.addEventListener('click', () => track('ar-launch'));
 
   document.getElementById('dims-toggle').addEventListener('click', (e) => {
     const on = mv.classList.toggle('show-dims');
@@ -140,6 +149,12 @@ ${embed ? '' : `<div class="note">
     setTimeout(() => { if (!mv.canActivateAR) noAr.style.display = 'inline'; }, 1500);
   }
   mv.addEventListener('ar-status', (event) => {
+    // Only WebXR exposes successful session events; external OS viewers expose launches.
+    if (event.detail.status === 'session-started' && !sessionCounted) {
+      sessionCounted = true;
+      track('ar-session');
+    }
+    if (event.detail.status === 'not-presenting') sessionCounted = false;
     if (event.detail.status === 'failed') sizeChip.textContent = 'AR could not start — you can still explore the 3D model';
   });
   mv.addEventListener('error', () => { sizeChip.textContent = 'Could not load the 3D model'; });

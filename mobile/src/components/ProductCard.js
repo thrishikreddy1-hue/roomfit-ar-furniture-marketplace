@@ -3,9 +3,11 @@ import { router } from 'expo-router';
 import { colors, shadow } from '../theme';
 import { assetUrl } from '../lib/config';
 import { hasAr } from '../lib/ar';
+import { availabilityLabel } from '../lib/availability.mjs';
 import { Badge } from './ui';
 
 export default function ProductCard({ product, width, style }) {
+  const availability = availabilityLabel(product);
   return (
     <Pressable
       onPress={() => router.push(`/product/${product.id}`)}
@@ -29,7 +31,7 @@ export default function ProductCard({ product, width, style }) {
         <Text style={styles.collection} numberOfLines={1}>{product.category || 'Curated piece'}</Text>
         <Text style={styles.name} numberOfLines={1}>{product.name}</Text>
         <Text style={styles.shop} numberOfLines={1}>{product.shop?.name}</Text>
-        <Text style={[styles.cta, product.availability === 'sold' && { color: colors.muted }]}>{product.availability === 'sold' ? 'Sold' : product.availability === 'reserved' ? 'Reserved' : 'Enquire for price'}</Text>
+        <Text style={[styles.cta, availability === 'Sold' && { color: colors.muted }]}>{availability === 'Available' ? 'Enquire for price' : availability}</Text>
         <Text style={styles.dims} numberOfLines={1}>
           {product.dimensions.width}×{product.dimensions.depth}×{product.dimensions.height} cm
         </Text>

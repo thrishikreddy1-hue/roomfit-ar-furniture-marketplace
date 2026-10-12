@@ -10,6 +10,7 @@
     "dev:api": "npm run dev --prefix backend",
     "dev:app": "npm start --prefix mobile",
     "build:web": "npm run build:web --prefix mobile",
-    "test": "npm test --prefix backend && npm run test:mongo --prefix backend"
+    "test": "npm test --prefix backend && npm run test:mongo --prefix backend && npm run test:unit --prefix mobile",
+    "check:app": "npm run lint --prefix mobile && npm run typecheck --prefix mobile && npm run build:web"
   }
 }

@@ -133,10 +133,25 @@ router.get('/:id', optionalAuth, async (req, res) => {
       return (b.createdAt || '').localeCompare(a.createdAt || '');
     })
     .slice(0, 6);
-  const viewed = req.user?.role === 'seller' || req.user?.role === 'admin'
-    ? product
-    : await db.products.update(product.id, { viewCount: (product.viewCount || 0) + 1 });
-  res.json({ product: await withShop(viewed), related: await withShops(related) });
+  const saved = req.user?.role === 'buyer'
+    ? Boolean(await db.wishlists.findOne({ buyerId: req.user.id, productId: product.id }))
+    : false;
+  res.json({ product: await withShop(product), related: await withShops(related), saved });
+});
+
+// Track deliberate shopper actions separately from catalogue reads and background refreshes.
+router.post('/:id/events', optionalAuth, async (req, res) => {
+  const fields = { view: 'viewCount', 'ar-launch': 'arLaunchCount', 'ar-session': 'arSessionCount' };
+  const field = fields[req.body?.event];
+  if (!Object.hasOwn(fields, req.body?.event)) return res.status(400).json({ error: 'Unknown product event' });
+  const product = await db.products.byId(req.params.id);
+  const shop = product && await db.shops.byId(product.shopId);
+  if (!product || !shop || shop.suspended) return res.status(404).json({ error: 'Product not found' });
+  if (field !== 'viewCount' && !product.modelUrl) return res.status(400).json({ error: 'This product has no AR model' });
+  // Seller/admin previews are not shopper interest.
+  if (req.user && req.user.role !== 'buyer') return res.status(204).end();
+  await db.products.increment(product.id, field);
+  res.status(204).end();
 });
 
 async function ownedProduct(req, res) {

@@ -568,3 +568,133 @@ test('admin portal: suspending a shop hides it; suspending an account blocks it'
   const log = (await api('GET', '/api/admin/activity', { token: admin })).body.activity;
   assert.ok(['shop.suspended', 'shop.restored', 'user.suspended', 'user.restored'].every((t) => log.some((a) => a.type === t)));
 });
+
+async function featureShop(label) {
+  const registered = await api('POST', '/api/auth/register', {
+    body: { name: `${label} Seller`, email: `${label}@features.test`, password: 'password123', role: 'seller' },
+  });
+  assert.equal(registered.status, 201);
+  const token = registered.body.token;
+  const shop = (await api('POST', '/api/shops', { token, body: { name: `${label} Shop` } })).body.shop;
+  const result = await api('POST', '/api/products', {
+    token,
+    body: { name: `${label} Chair`, category: 'Chairs', stock: 3, dimensions: { width: 60, depth: 55, height: 90 }, images: ['https://example.com/front.jpg', 'https://example.com/side.jpg'] },
+  });
+  assert.equal(result.status, 201);
+  return { token, shop, product: result.body.product };
+}
+
+test('wishlist: saved state survives product reads, stays private, and can be removed', async () => {
+  const { token: seller, product, shop } = await featureShop('wishlist');
+  const buyer = await login('buyer@roomfit.test');
+  const other = (await api('POST', '/api/auth/login', { body: { email: 'new@example.com', password: 'secret1' } })).body.token;
+  const path = `/api/wishlist/${product.id}`;
+  assert.equal((await api('POST', path)).status, 401);
+  assert.equal((await api('POST', path, { token: seller })).status, 403);
+  assert.equal((await api('POST', '/api/wishlist/missing', { token: buyer })).status, 404);
+  assert.equal((await api('GET', `/api/products/${product.id}`, { token: buyer })).body.saved, false);
+  assert.equal((await api('POST', path, { token: buyer })).body.saved, true);
+  assert.equal((await api('GET', `/api/products/${product.id}`, { token: buyer })).body.saved, true);
+  assert.equal((await api('GET', `/api/products/${product.id}`, { token: other })).body.saved, false);
+  assert.ok((await api('GET', '/api/wishlist', { token: buyer })).body.products.some((p) => p.id === product.id));
+  assert.ok(!(await api('GET', '/api/wishlist', { token: other })).body.products.some((p) => p.id === product.id));
+  // Suspended shops must not leak through saved listings.
+  const db = require('../src/db');
+  await db.shops.update(shop.id, { suspended: true });
+  assert.ok(!(await api('GET', '/api/wishlist', { token: buyer })).body.products.some((p) => p.id === product.id));
+  assert.equal((await api('POST', path, { token: buyer })).status, 404);
+  assert.equal((await api('DELETE', path, { token: buyer })).status, 204);
+  await db.shops.update(shop.id, { suspended: false });
+  assert.equal((await api('GET', `/api/products/${product.id}`, { token: buyer })).body.saved, false);
+  assert.equal((await api('DELETE', path, { token: buyer })).status, 204);
+});
+
+test('availability and delivery: valid seller settings reach buyers, invalid values are rejected', async () => {
+  const { token, shop, product } = await featureShop('delivery');
+  assert.equal((await api('PUT', `/api/products/${product.id}`, { token, body: { availability: 'unknown' } })).status, 400);
+  for (const availability of ['reserved', 'sold', 'available']) {
+    assert.equal((await api('PUT', `/api/products/${product.id}`, { token, body: { availability } })).status, 200);
+    assert.equal((await api('GET', `/api/products/${product.id}`)).body.product.availability, availability);
+  }
+  const delivery = { deliveryAreas: '  Mumbai  ', deliveryLeadTime: '3–5 days', assemblyAvailable: true, pickupAvailable: false };
+  assert.equal((await api('PUT', `/api/shops/${shop.id}`, { token, body: delivery })).status, 200);
+  const displayed = (await api('GET', `/api/products/${product.id}`)).body.product.shop;
+  assert.equal(displayed.deliveryAreas, 'Mumbai');
+  assert.equal(displayed.deliveryLeadTime, '3–5 days');
+  assert.equal(displayed.assemblyAvailable, true);
+  assert.equal(displayed.pickupAvailable, false);
+  for (const body of [{ assemblyAvailable: 'false' }, { pickupAvailable: 1 }, { deliveryAreas: ['Mumbai'] }, { deliveryLeadTime: 'x'.repeat(301) }]) {
+    assert.equal((await api('PUT', `/api/shops/${shop.id}`, { token, body })).status, 400);
+  }
+});
+
+test('photo order: only the owner can reorder existing photos without changing their set', async () => {
+  const { token, product } = await featureShop('photos');
+  const otherSeller = await login('seller@oakandloom.test');
+  const path = `/api/products/${product.id}/images`;
+  const images = [...product.images].reverse();
+  assert.equal((await api('PUT', path, { token: otherSeller, body: { images } })).status, 403);
+  for (const invalid of [[images[0]], [images[0], images[0]], ['https://example.com/foreign.jpg', images[1]]]) {
+    assert.equal((await api('PUT', path, { token, body: { images: invalid } })).status, 400);
+  }
+  assert.equal((await api('PUT', path, { token, body: { images } })).status, 200);
+  assert.deepEqual((await api('GET', `/api/products/${product.id}`)).body.product.images, images);
+});
+
+test('reviews: enquiry eligibility, rating validation, editing, and full-catalogue summary', async () => {
+  const { token: seller, shop, product } = await featureShop('reviews');
+  const buyer = await login('buyer@roomfit.test');
+  const path = `/api/reviews/shop/${shop.id}`;
+  assert.equal((await api('POST', path, { body: { rating: 5 } })).status, 401);
+  assert.equal((await api('POST', path, { token: seller, body: { rating: 5 } })).status, 403);
+  assert.equal((await api('POST', path, { token: buyer, body: { rating: 5 } })).status, 403);
+  assert.equal((await api('POST', '/api/enquiries', { token: buyer, body: { productId: product.id, name: 'Buyer', phone: '9876543210' } })).status, 201);
+  for (const rating of [0, 6, 1.5]) assert.equal((await api('POST', path, { token: buyer, body: { rating } })).status, 400);
+  assert.equal((await api('POST', path, { token: buyer, body: { rating: 5, body: 'x'.repeat(501) } })).status, 400);
+  assert.equal((await api('POST', path, { token: buyer, body: { rating: 1, body: 'First review' } })).status, 201);
+  assert.equal((await api('POST', path, { token: buyer, body: { rating: 1, body: 'Updated review' } })).status, 200);
+  // Older low ratings must still affect the total even beyond the first display page.
+  const db = require('../src/db');
+  const original = await db.reviews.findOne({ shopId: shop.id });
+  await db.reviews.update(original.id, { createdAt: '2020-01-01T00:00:00.000Z' });
+  for (let i = 0; i < 20; i += 1) await db.reviews.insert({ shopId: shop.id, buyerId: `review-buyer-${i}`, buyerName: `Buyer ${i}`, rating: 5, body: 'Helpful shop' });
+  const first = (await api('GET', path)).body;
+  assert.equal(first.count, 21);
+  assert.equal(first.reviews.length, 20);
+  assert.equal(first.average, 101 / 21);
+  assert.equal(first.hasMore, true);
+  assert.ok(first.reviews.every((review) => !('buyerId' in review)));
+  const second = (await api('GET', `${path}?page=2`)).body;
+  assert.equal(second.reviews.length, 1);
+  assert.equal(second.reviews[0].body, 'Updated review');
+  assert.equal(second.count, 21);
+  assert.equal(second.hasMore, false);
+  await db.shops.update(shop.id, { suspended: true });
+  assert.equal((await api('GET', path)).status, 404);
+});
+
+test('analytics: explicit view/AR events, atomic counters, and seller isolation', async () => {
+  const { token, product, shop } = await featureShop('analytics');
+  const buyer = await login('buyer@roomfit.test');
+  const admin = await login('admin@roomfit.test');
+  const path = `/api/products/${product.id}/events`;
+  for (let i = 0; i < 3; i += 1) await api('GET', `/api/products/${product.id}`, { token: buyer });
+  assert.equal((await api('GET', '/api/shops/mine', { token })).body.analytics.productViews, 0);
+  assert.equal((await api('POST', path, { body: { event: 'ar-launch' } })).status, 400);
+  assert.equal((await api('POST', path, { body: { event: 'unknown' } })).status, 400);
+  const views = await Promise.all(Array.from({ length: 20 }, () => api('POST', path, { body: { event: 'view' } })));
+  assert.ok(views.every((result) => result.status === 204));
+  await api('POST', path, { token, body: { event: 'view' } });
+  assert.equal((await api('GET', '/api/shops/mine', { token })).body.analytics.productViews, 20);
+  assert.equal((await api('PUT', `/api/admin/products/${product.id}/ar`, { token: admin, body: { modelUrl: 'https://example.com/chair.glb' } })).status, 200);
+  await api('POST', path, { body: { event: 'ar-launch' } });
+  await api('POST', path, { body: { event: 'ar-session' } });
+  await api('POST', path, { token: admin, body: { event: 'ar-session' } });
+  const analytics = (await api('GET', '/api/shops/mine', { token })).body.analytics;
+  assert.equal(analytics.arLaunches, 1);
+  assert.equal(analytics.arSessions, 1);
+  assert.equal(analytics.mostViewed.id, product.id);
+  await require('../src/db').shops.update(shop.id, { suspended: true });
+  assert.equal((await api('POST', path, { body: { event: 'view' } })).status, 404);
+  assert.equal((await fetch(`${base}/ar/${product.id}`)).status, 404);
+});

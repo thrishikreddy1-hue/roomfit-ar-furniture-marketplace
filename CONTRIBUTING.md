@@ -20,8 +20,7 @@ Run the checks relevant to your change:
 
 ```bash
 npm test
-npm run lint --prefix mobile
-npm run build:web
+npm run check:app
 ```
 
 Commit the change, push your branch, and open a pull request describing the resulting behavior and how you tested it. Never commit `.env` secrets, runtime customer records, uploaded assets, or `node_modules`.

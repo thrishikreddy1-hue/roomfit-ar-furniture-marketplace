@@ -74,6 +74,8 @@ function createApp() {
   app.get('/ar/:productId', async (req, res) => {
     const product = await db.products.byId(req.params.productId);
     if (!product) return res.status(404).send('Product not found');
+    const shop = await db.shops.byId(product.shopId);
+    if (!shop || shop.suspended) return res.status(404).send('Product not found');
     if (!product.modelUrl) return res.status(404).send('This product has no 3D model yet');
     res.type('html').send(renderArPage(req, product));
   });

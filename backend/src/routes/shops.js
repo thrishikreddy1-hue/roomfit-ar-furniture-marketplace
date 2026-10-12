@@ -9,6 +9,18 @@ const router = express.Router();
 
 const SHOP_FIELDS = ['name', 'description', 'logo', 'coverImage', 'city', 'address', 'phone', 'whatsappNotifications', 'deliveryAreas', 'deliveryLeadTime', 'assemblyAvailable', 'pickupAvailable'];
 const pick = (body) => Object.fromEntries(SHOP_FIELDS.filter((k) => body[k] !== undefined).map((k) => [k, body[k]]));
+function deliveryError(data) {
+  for (const key of ['assemblyAvailable', 'pickupAvailable']) {
+    if (data[key] !== undefined && typeof data[key] !== 'boolean') return `${key} must be true or false`;
+  }
+  for (const key of ['deliveryAreas', 'deliveryLeadTime']) {
+    if (data[key] !== undefined) {
+      if (typeof data[key] !== 'string' || data[key].length > 300) return `${key} must be text of 300 characters or fewer`;
+      data[key] = data[key].trim();
+    }
+  }
+  return null;
+}
 const phoneHasWhatsAppFormat = (phone) => {
   const digits = String(phone || '').replace(/\D/g, '');
   return digits.length >= 8 && digits.length <= 15;
@@ -25,8 +37,9 @@ async function sellerAnalytics(shop) {
   return {
     productViews: products.reduce((sum, product) => sum + (product.viewCount || 0), 0),
     enquiries: enquiries.length,
-    arViews: products.filter((product) => product.modelUrl).reduce((sum, product) => sum + (product.viewCount || 0), 0),
-    mostViewed: [...products].sort((a, b) => (b.viewCount || 0) - (a.viewCount || 0))[0] || null,
+    arLaunches: products.reduce((sum, product) => sum + (product.arLaunchCount || 0), 0),
+    arSessions: products.reduce((sum, product) => sum + (product.arSessionCount || 0), 0),
+    mostViewed: [...products].filter((product) => product.viewCount > 0).sort((a, b) => (b.viewCount || 0) - (a.viewCount || 0))[0] || null,
   };
 }
 
@@ -57,6 +70,8 @@ router.post('/', requireRole('seller'), async (req, res) => {
     return res.status(409).json({ error: 'You already own a shop — update it instead' });
   }
   const data = pick(req.body || {});
+  const invalidDelivery = deliveryError(data);
+  if (invalidDelivery) return res.status(400).json({ error: invalidDelivery });
   if (!data.name?.trim()) return res.status(400).json({ error: 'Shop name is required' });
   if (data.whatsappNotifications !== undefined && typeof data.whatsappNotifications !== 'boolean') {
     return res.status(400).json({ error: 'WhatsApp notifications preference must be true or false' });
@@ -76,6 +91,8 @@ router.put('/:id', requireRole('seller'), async (req, res) => {
   if (!shop) return res.status(404).json({ error: 'Shop not found' });
   if (shop.ownerId !== req.user.id) return res.status(403).json({ error: 'You do not own this shop' });
   const data = pick(req.body || {});
+  const invalidDelivery = deliveryError(data);
+  if (invalidDelivery) return res.status(400).json({ error: invalidDelivery });
   if (data.name !== undefined && !String(data.name).trim()) {
     return res.status(400).json({ error: 'Shop name cannot be empty' });
   }

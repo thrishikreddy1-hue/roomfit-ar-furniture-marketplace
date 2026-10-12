@@ -16,7 +16,8 @@ export default function ShopDetail() {
   const { user } = useAuth();
   const { width } = useWindowDimensions();
   const { data, loading, error, reload } = useAsync(() => api.shop(id), [id]);
-  const reviews = useAsync(() => api.shopReviews(id), [id]);
+  const [reviewPage, setReviewPage] = useState(1);
+  const reviews = useAsync(() => api.shopReviews(id, reviewPage), [id, reviewPage]);
   useLiveRefresh(reload, (e) => e.shopId === id && (e.type.startsWith('product.') || e.type.startsWith('shop.')));
 
   if (loading) return <Loading />;
@@ -61,8 +62,13 @@ export default function ShopDetail() {
             <View style={styles.reviewCard}>
               <H2 style={{ fontSize: 16 }}>Shop reviews</H2>
               <Text style={styles.rating}>{reviews.data?.average ? `${reviews.data.average.toFixed(1)} ★` : 'New shop'} <Text style={styles.reviewCount}>· {reviews.data?.count || 0} reviews</Text></Text>
-              {(reviews.data?.reviews || []).slice(0, 2).map((review) => <Text key={review.id} style={styles.reviewText}>“{review.body || 'Great experience.'}” — {review.buyerName}</Text>)}
-              {user?.role === 'buyer' && <ReviewForm shopId={shop.id} onSaved={reviews.reload} />}
+              <ErrorBox error={reviews.error} onRetry={reviews.reload} />
+              {(reviews.data?.reviews || []).map((review) => <Text key={review.id} style={styles.reviewText}>{review.rating} ★ {review.body ? `“${review.body}”` : ''} — {review.buyerName}</Text>)}
+              <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+                {reviewPage > 1 && <Button small variant="outline" title="Previous reviews" onPress={() => setReviewPage((page) => page - 1)} />}
+                {reviews.data?.hasMore && <Button small variant="outline" title="More reviews" onPress={() => setReviewPage((page) => page + 1)} />}
+              </View>
+              {user?.role === 'buyer' && <ReviewForm shopId={shop.id} onSaved={() => { if (reviewPage === 1) return reviews.reload(); setReviewPage(1); }} />}
             </View>
           </View>
         }
@@ -78,16 +84,19 @@ function ReviewForm({ shopId, onSaved }) {
   const [body, setBody] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
+  const [saved, setSaved] = useState(false);
   const submit = async () => {
-    setBusy(true); setError(null);
-    try { await api.reviewShop(shopId, { rating, body }); setBody(''); await onSaved(); } catch (e) { setError(e); } finally { setBusy(false); }
+    setBusy(true); setError(null); setSaved(false);
+    try { await api.reviewShop(shopId, { rating, body }); setBody(''); setSaved(true); await onSaved(); } catch (e) { setError(e); } finally { setBusy(false); }
   };
   return (
     <View style={{ marginTop: space(3) }}>
       <Text style={styles.reviewLabel}>Rate your experience</Text>
       <View style={styles.ratingRow}>{[1, 2, 3, 4, 5].map((value) => <Pressable key={value} onPress={() => setRating(value)}><Text style={[styles.star, value <= rating && styles.starOn]}>★</Text></Pressable>)}</View>
-      <Field label="Optional note" value={body} onChangeText={setBody} placeholder="Tell future shoppers about the shop" multiline />
+      <Field label="Optional note" value={body} onChangeText={setBody} maxLength={500} placeholder="Tell future shoppers about the shop" multiline
+        hint="You can review a shop after sending it an enquiry. This describes your shop experience, not a verified purchase." />
       {error && <Muted style={{ color: colors.danger }}>{error.message}</Muted>}
+      {saved && <Muted style={{ color: colors.success }}>Your review has been saved.</Muted>}
       <Button small title="Post review" onPress={submit} loading={busy} />
     </View>
   );
