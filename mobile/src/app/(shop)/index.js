@@ -33,7 +33,6 @@ export default function Home() {
 
   if (loading) return <Loading />;
   const cardW = Math.min(200, (width - space(4) * 2 - 12) / 2);
-  const heroProduct = data?.products?.[0];
   const recommended = [...(data?.products || [])]
     .filter((p) => p.modelUrl || p.category)
     .sort((a, b) => Number(Boolean(b.modelUrl)) - Number(Boolean(a.modelUrl)))
@@ -59,34 +58,6 @@ export default function Home() {
             <View style={styles.demo}>
               <Ionicons name="flask-outline" size={16} color={colors.warn} />
               <Text style={styles.demoText}>Demo mode: accounts and enquiries reset from time to time.</Text>
-            </View>
-          )}
-        </View>
-
-        <View style={styles.hero}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.eyebrow}>THE PRIVATE VIEWING</Text>
-            <Text style={styles.heroTitle}>Designed for your room, before it arrives.</Text>
-            <Text style={styles.heroBody}>
-              Place considered pieces at true scale, discover the silhouette in your space, and choose with confidence.
-            </Text>
-            <Pressable style={styles.heroCta} onPress={() => router.push({ pathname: '/browse', params: { arOnly: '1', fitMode: '1' } })}>
-              <Ionicons name="cube-outline" size={16} color={colors.ink} />
-              <Text style={styles.heroCtaText}>Explore AR collection</Text>
-            </Pressable>
-          </View>
-
-          {heroProduct?.images?.[0] ? (
-            <View style={styles.heroVisual}>
-              <Image source={{ uri: assetUrl(heroProduct.images[0]) }} style={styles.heroImage} resizeMode="cover" />
-              <View style={styles.heroImageBadge}>
-                <Ionicons name="cube-outline" size={12} color="#fff" />
-                <Text style={styles.heroImageBadgeText}>AR EDIT</Text>
-              </View>
-            </View>
-          ) : (
-            <View style={styles.heroVisualFallback}>
-              <Ionicons name="cube-outline" size={28} color="#fff" />
             </View>
           )}
         </View>
@@ -174,29 +145,6 @@ const styles = StyleSheet.create({
   demoText: { flex: 1, color: colors.warn, fontSize: 13 },
   brand: { color: colors.ink, fontSize: 30, fontWeight: '800', letterSpacing: -1 },
   searchBtn: { width: 46, height: 46, borderRadius: 23, backgroundColor: colors.card, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border, ...shadow },
-  hero: {
-    marginHorizontal: space(4),
-    marginTop: space(2),
-    backgroundColor: colors.ink,
-    borderRadius: 30,
-    padding: space(5),
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    borderWidth: 1,
-    borderColor: '#302B26',
-    ...shadow,
-  },
-  eyebrow: { color: '#D6B27A', fontSize: 10, fontWeight: '800', letterSpacing: 1.2, marginBottom: 8 },
-  heroTitle: { color: '#FFFCF7', fontSize: 25, fontWeight: '800', lineHeight: 30, letterSpacing: -0.7 },
-  heroBody: { color: '#D6CEC4', fontSize: 14, marginTop: 10, lineHeight: 20 },
-  heroCta: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', backgroundColor: '#D6B27A', borderRadius: radius.pill, paddingHorizontal: 16, paddingVertical: 10, marginTop: space(4), borderWidth: 1, borderColor: '#E7C896' },
-  heroCtaText: { fontWeight: '700', color: colors.ink },
-  heroVisual: { width: 118, height: 142, borderRadius: 20, overflow: 'hidden', backgroundColor: colors.card, borderWidth: 1, borderColor: '#52463A', elevation: 2, shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 12, shadowOffset: { width: 0, height: 5 } },
-  heroImage: { width: '100%', height: '100%' },
-  heroImageBadge: { position: 'absolute', left: 8, top: 8, flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(31,26,23,0.48)', paddingHorizontal: 8, paddingVertical: 5, borderRadius: 999 },
-  heroImageBadgeText: { color: '#fff', fontSize: 11, fontWeight: '700' },
-  heroVisualFallback: { width: 118, height: 142, borderRadius: 20, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#52463A' },
   sectionHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', paddingHorizontal: space(4), marginBottom: space(3) },
   sectionTitle: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   sectionMark: { width: 4, height: 22, borderRadius: 2, backgroundColor: colors.accentWarm },

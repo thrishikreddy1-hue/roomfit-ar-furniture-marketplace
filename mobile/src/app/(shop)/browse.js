@@ -14,15 +14,15 @@ const SORTS = [
   { key: 'name', label: 'A–Z' },
 ];
 
-export default function Browse() {
+export default function Browse({ privateViewing = false }) {
   const params = useLocalSearchParams();
   const { width } = useWindowDimensions();
   const [q, setQ] = useState('');
   const [debouncedQ, setDebouncedQ] = useState('');
   const [category, setCategory] = useState(params.category || '');
   const [sort, setSort] = useState('newest');
-  const [arOnly, setArOnly] = useState(params.arOnly === '1');
-  const [showFit, setShowFit] = useState(params.fitMode === '1' || params.arOnly === '1');
+  const [arOnly, setArOnly] = useState(privateViewing || params.arOnly === '1');
+  const [showFit, setShowFit] = useState(privateViewing || params.fitMode === '1' || params.arOnly === '1');
   const [fit, setFit] = useState({ maxWidth: '', maxDepth: '', maxHeight: '' });
 
   // Deep links from Home (category chip / AR banner) update the filters while this tab stays mounted.
@@ -55,9 +55,9 @@ export default function Browse() {
   const header = (
     <View style={{ marginBottom: space(3) }}>
       <View style={styles.intro}>
-        <Text style={styles.kicker}>THE ROOMFIT EDIT</Text>
-        <Text style={styles.title}>Find a piece that feels right at home.</Text>
-        <Text style={styles.subtitle}>Explore local furniture, view selected pieces in 3D, and check the fit before you enquire.</Text>
+        <Text style={styles.kicker}>{privateViewing ? 'THE PRIVATE VIEWING' : 'THE ROOMFIT EDIT'}</Text>
+        <Text style={styles.title}>{privateViewing ? 'See how considered pieces fit your space.' : 'Find a piece that feels right at home.'}</Text>
+        <Text style={styles.subtitle}>{privateViewing ? 'Explore AR-ready furniture and check the dimensions before you enquire.' : 'Explore local furniture, view selected pieces in 3D, and check the fit before you enquire.'}</Text>
       </View>
       <View style={styles.search}>
         <Ionicons name="search" size={18} color={colors.muted} />
