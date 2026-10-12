@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { Link, router } from 'expo-router';
 import { useAuth } from '../context/AuthContext';
+import { api } from '../lib/api';
+import { useAsync } from '../lib/useAsync';
 import { Button, ErrorBox, Field, H1, Muted, Screen } from '../components/ui';
 import { colors, space } from '../theme';
 
@@ -17,6 +19,8 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
+  const health = useAsync(() => api.health());
+  const showDemo = health.data?.demoMode || health.data?.database === 'file';
 
   const submit = async (e = email, p = password) => {
     setBusy(true);
@@ -47,12 +51,12 @@ export default function Login() {
         </Link>
       </View>
 
-      <View style={{ marginTop: space(8), gap: 8 }}>
+      {showDemo && <View style={{ marginTop: space(8), gap: 8 }}>
         <Muted style={{ textAlign: 'center', fontSize: 12 }}>Try the demo (password: password123)</Muted>
         {DEMO.map((d) => (
           <Button key={d.email} small variant="outline" title={`${d.label} · ${d.email}`} onPress={() => submit(d.email, 'password123')} disabled={busy} />
         ))}
-      </View>
+      </View>}
     </Screen>
   );
 }
