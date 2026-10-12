@@ -1,5 +1,11 @@
 # RoomFit: an AR furniture marketplace
 
+Browse local furniture, preview pieces in 3D and augmented reality, and contact the shop before buying.
+
+**Start here:** [Step-by-step setup](docs/GETTING_STARTED.md) · [Project structure](docs/PROJECT_GUIDE.md) · [Contributing](CONTRIBUTING.md)
+
+RoomFit includes a buyer storefront, seller dashboard, and admin tools for managing furniture models. It is built with React Native, Expo, Express, and MongoDB, with a local JSON database for development.
+
 Shoppers browse furniture from local shops, **place it in their own room with AR at true size**, check it fits, and **enquire** with the shop.
 Listings show no prices: shops reply to enquiries with price, availability and delivery details.
 Sellers list pieces with photos and sizes; the RoomFit team (admin) adds the 3D/AR models. Changes show up live on every screen.
@@ -12,7 +18,7 @@ Sellers list pieces with photos and sizes; the RoomFit team (admin) adds the 3D/
 
 ## Quick start
 
-You need Node 20+ and, on your phone, the **Expo Go** app. The phone and computer must be on the same Wi-Fi.
+Use Node.js 22, matching this project's configured engine. For phone testing, use an Expo Go version compatible with the installed Expo SDK, or a development build. The phone and computer must be on the same Wi-Fi.
 
 ```bash
 cd backend
