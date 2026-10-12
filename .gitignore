@@ -4,7 +4,7 @@ mobile/dist/
 backend/data/
 backend/uploads/
 .vercel/
-.env
-.env*.local
+.env*
+!.env.example
 *.log
 .DS_Store

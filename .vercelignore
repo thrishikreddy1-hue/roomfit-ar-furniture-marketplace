@@ -3,5 +3,7 @@
 mobile/dist
 backend/data
 backend/uploads
-.env
-.env*.local
+backend/.cache
+**/.git
+.vercel
+**/.env*
